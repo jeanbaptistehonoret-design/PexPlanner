@@ -20,7 +20,6 @@ export default async function handler(req, res) {
       action
     } = req.body || {};
 
-
     /* =====================================================
        SECURITE
        ===================================================== */
@@ -64,7 +63,6 @@ export default async function handler(req, res) {
         .order("duration")
         .order("name");
 
-
       if (sessionsError) {
         throw sessionsError;
       }
@@ -89,13 +87,8 @@ export default async function handler(req, res) {
             duration
           )
         `)
-        .order("date", {
-          ascending: true
-        })
-        .order("time", {
-          ascending: true
-        });
-
+        .order("date")
+        .order("time");
 
       if (slotsError) {
         throw slotsError;
@@ -125,15 +118,10 @@ export default async function handler(req, res) {
           ascending: false
         });
 
-
       if (bookingsError) {
         throw bookingsError;
       }
 
-
-      /*
-       Horaires habituels
-      */
 
       const {
         data: openingHours,
@@ -143,15 +131,10 @@ export default async function handler(req, res) {
         .select("*")
         .order("day_of_week");
 
-
       if (openingError) {
         throw openingError;
       }
 
-
-      /*
-       Exceptions
-      */
 
       const {
         data: specialHours,
@@ -162,15 +145,10 @@ export default async function handler(req, res) {
         .order("date")
         .order("start_time");
 
-
       if (specialError) {
         throw specialError;
       }
 
-
-      /*
-       Blocages
-      */
 
       const {
         data: blockedPeriods,
@@ -180,7 +158,6 @@ export default async function handler(req, res) {
         .select("*")
         .order("date")
         .order("start_time");
-
 
       if (blockedError) {
         throw blockedError;
@@ -213,10 +190,125 @@ export default async function handler(req, res) {
 
 
     /* =====================================================
+       MODIFIER HORAIRES HABITUELS
+       ===================================================== */
+
+    if (
+      action === "updateOpeningHours"
+    ) {
+
+      const {
+        dayOfWeek,
+        isOpen,
+        startTime,
+        endTime
+      } = req.body;
+
+
+      if (
+        dayOfWeek === undefined ||
+        isOpen === undefined
+      ) {
+
+        return res.status(400).json({
+          error:
+            "Jour et statut obligatoires"
+        });
+
+      }
+
+
+      /*
+       Si le jour est ouvert,
+       les horaires sont obligatoires.
+      */
+
+      if (
+        isOpen === true &&
+        (
+          !startTime ||
+          !endTime
+        )
+      ) {
+
+        return res.status(400).json({
+          error:
+            "Les horaires sont obligatoires pour un jour ouvert"
+        });
+
+      }
+
+
+      if (
+        isOpen === true &&
+        startTime >= endTime
+      ) {
+
+        return res.status(400).json({
+          error:
+            "L'heure de fin doit être après l'heure de début"
+        });
+
+      }
+
+
+      const {
+        data,
+        error
+      } = await supabase
+        .from("opening_hours")
+        .upsert(
+          {
+            day_of_week:
+              Number(dayOfWeek),
+
+            is_open:
+              Boolean(isOpen),
+
+            start_time:
+              isOpen
+                ? startTime
+                : null,
+
+            end_time:
+              isOpen
+                ? endTime
+                : null
+          },
+          {
+            onConflict:
+              "day_of_week"
+          }
+        )
+        .select()
+        .single();
+
+
+      if (error) {
+        throw error;
+      }
+
+
+      return res.status(200).json({
+
+        success:
+          true,
+
+        openingHours:
+          data
+
+      });
+
+    }
+
+
+    /* =====================================================
        CREER UN CRENEAU MANUEL
        ===================================================== */
 
-    if (action === "createSlot") {
+    if (
+      action === "createSlot"
+    ) {
 
       const {
         date,
@@ -232,10 +324,12 @@ export default async function handler(req, res) {
         !time ||
         !sessionId
       ) {
+
         return res.status(400).json({
           error:
             "Date, heure et séance obligatoires"
         });
+
       }
 
 
@@ -246,7 +340,10 @@ export default async function handler(req, res) {
         .select("id")
         .eq("date", date)
         .eq("time", time)
-        .eq("session_id", sessionId)
+        .eq(
+          "session_id",
+          sessionId
+        )
         .limit(1);
 
 
@@ -309,10 +406,12 @@ export default async function handler(req, res) {
 
 
     /* =====================================================
-       BLOQUER UN CRENEAU
+       MODIFIER CRENEAU
        ===================================================== */
 
-    if (action === "changeSlot") {
+    if (
+      action === "changeSlot"
+    ) {
 
       const {
         slotId,
@@ -324,10 +423,12 @@ export default async function handler(req, res) {
         !slotId ||
         !status
       ) {
+
         return res.status(400).json({
           error:
             "Informations manquantes"
         });
+
       }
 
 
@@ -335,10 +436,12 @@ export default async function handler(req, res) {
         status !== "available" &&
         status !== "unavailable"
       ) {
+
         return res.status(400).json({
           error:
             "Statut invalide"
         });
+
       }
 
 
@@ -347,17 +450,20 @@ export default async function handler(req, res) {
       ) {
 
         const {
-          data: bookings
+          data: existingBookings
         } = await supabase
           .from("bookings")
           .select("id")
-          .eq("slot_id", slotId)
+          .eq(
+            "slot_id",
+            slotId
+          )
           .limit(1);
 
 
         if (
-          bookings &&
-          bookings.length > 0
+          existingBookings &&
+          existingBookings.length > 0
         ) {
 
           return res.status(409).json({
@@ -378,7 +484,10 @@ export default async function handler(req, res) {
         .update({
           status
         })
-        .eq("id", slotId)
+        .eq(
+          "id",
+          slotId
+        )
         .select()
         .single();
 
@@ -389,8 +498,12 @@ export default async function handler(req, res) {
 
 
       return res.status(200).json({
-        success: true,
+
+        success:
+          true,
+
         slot
+
       });
 
     }
@@ -400,7 +513,9 @@ export default async function handler(req, res) {
        RESERVATION PARTENAIRE
        ===================================================== */
 
-    if (action === "partnerBooking") {
+    if (
+      action === "partnerBooking"
+    ) {
 
       const {
         slotId,
@@ -443,7 +558,10 @@ export default async function handler(req, res) {
           time,
           session_id
         `)
-        .eq("id", slotId)
+        .eq(
+          "id",
+          slotId
+        )
         .single();
 
 
@@ -461,7 +579,8 @@ export default async function handler(req, res) {
 
 
       if (
-        slot.status !== "available"
+        slot.status !==
+        "available"
       ) {
 
         return res.status(409).json({
@@ -477,7 +596,10 @@ export default async function handler(req, res) {
       } = await supabase
         .from("bookings")
         .select("id")
-        .eq("slot_id", slotId)
+        .eq(
+          "slot_id",
+          slotId
+        )
         .limit(1);
 
 
@@ -511,19 +633,24 @@ export default async function handler(req, res) {
             lastName,
 
           email:
-            email || null,
+            email ||
+            null,
 
           phone:
-            phone || null,
+            phone ||
+            null,
 
           ticket:
             ticket,
 
           participants:
-            Number(participants) || 1,
+            Number(
+              participants
+            ) || 1,
 
           comment:
-            comment || null,
+            comment ||
+            null,
 
           source:
             "partner",
@@ -581,10 +708,12 @@ export default async function handler(req, res) {
 
 
     /* =====================================================
-       LIBERER UN CRENEAU
+       LIBERER CRENEAU
        ===================================================== */
 
-    if (action === "releaseSlot") {
+    if (
+      action === "releaseSlot"
+    ) {
 
       const {
         slotId
@@ -602,17 +731,20 @@ export default async function handler(req, res) {
 
 
       const {
-        data: bookings
+        data: existingBookings
       } = await supabase
         .from("bookings")
         .select("id")
-        .eq("slot_id", slotId)
+        .eq(
+          "slot_id",
+          slotId
+        )
         .limit(1);
 
 
       if (
-        bookings &&
-        bookings.length > 0
+        existingBookings &&
+        existingBookings.length > 0
       ) {
 
         return res.status(409).json({
@@ -658,10 +790,12 @@ export default async function handler(req, res) {
 
 
     /* =====================================================
-       SUPPRIMER UN CRENEAU
+       SUPPRIMER CRENEAU
        ===================================================== */
 
-    if (action === "deleteSlot") {
+    if (
+      action === "deleteSlot"
+    ) {
 
       const {
         slotId
@@ -679,17 +813,20 @@ export default async function handler(req, res) {
 
 
       const {
-        data: bookings
+        data: existingBookings
       } = await supabase
         .from("bookings")
         .select("id")
-        .eq("slot_id", slotId)
+        .eq(
+          "slot_id",
+          slotId
+        )
         .limit(1);
 
 
       if (
-        bookings &&
-        bookings.length > 0
+        existingBookings &&
+        existingBookings.length > 0
       ) {
 
         return res.status(409).json({
@@ -747,7 +884,19 @@ export default async function handler(req, res) {
 
         return res.status(400).json({
           error:
-            "Date, heure de début et heure de fin obligatoires"
+            "Date et horaires obligatoires"
+        });
+
+      }
+
+
+      if (
+        startTime >= endTime
+      ) {
+
+        return res.status(400).json({
+          error:
+            "L'heure de fin doit être après l'heure de début"
         });
 
       }
@@ -772,7 +921,8 @@ export default async function handler(req, res) {
             endTime,
 
           note:
-            note || null
+            note ||
+            null
 
         })
         .select()
@@ -798,11 +948,59 @@ export default async function handler(req, res) {
 
 
     /* =====================================================
-       FERMETURE EXCEPTIONNELLE
+       SUPPRIMER OUVERTURE EXCEPTIONNELLE
        ===================================================== */
 
     if (
-      action === "createBlockedPeriod"
+      action ===
+      "deleteSpecialHours"
+    ) {
+
+      const {
+        id
+      } = req.body;
+
+
+      if (!id) {
+
+        return res.status(400).json({
+          error:
+            "Identifiant manquant"
+        });
+
+      }
+
+
+      const {
+        error
+      } = await supabase
+        .from("special_hours")
+        .delete()
+        .eq(
+          "id",
+          id
+        );
+
+
+      if (error) {
+        throw error;
+      }
+
+
+      return res.status(200).json({
+        success: true
+      });
+
+    }
+
+
+    /* =====================================================
+       CREER BLOCAGE
+       ===================================================== */
+
+    if (
+      action ===
+      "createBlockedPeriod"
     ) {
 
       const {
@@ -821,7 +1019,19 @@ export default async function handler(req, res) {
 
         return res.status(400).json({
           error:
-            "Date, heure de début et heure de fin obligatoires"
+            "Date et horaires obligatoires"
+        });
+
+      }
+
+
+      if (
+        startTime >= endTime
+      ) {
+
+        return res.status(400).json({
+          error:
+            "L'heure de fin doit être après l'heure de début"
         });
 
       }
@@ -843,7 +1053,8 @@ export default async function handler(req, res) {
             endTime,
 
           reason:
-            reason || null,
+            reason ||
+            null,
 
           source:
             "pilotexperience"
@@ -872,54 +1083,12 @@ export default async function handler(req, res) {
 
 
     /* =====================================================
-       SUPPRIMER UNE EXCEPTION
+       SUPPRIMER BLOCAGE
        ===================================================== */
 
     if (
-      action === "deleteSpecialHours"
-    ) {
-
-      const {
-        id
-      } = req.body;
-
-
-      if (!id) {
-
-        return res.status(400).json({
-          error:
-            "Identifiant manquant"
-        });
-
-      }
-
-
-      const {
-        error
-      } = await supabase
-        .from("special_hours")
-        .delete()
-        .eq("id", id);
-
-
-      if (error) {
-        throw error;
-      }
-
-
-      return res.status(200).json({
-        success: true
-      });
-
-    }
-
-
-    /* =====================================================
-       SUPPRIMER UN BLOCAGE
-       ===================================================== */
-
-    if (
-      action === "deleteBlockedPeriod"
+      action ===
+      "deleteBlockedPeriod"
     ) {
 
       const {
@@ -942,7 +1111,10 @@ export default async function handler(req, res) {
       } = await supabase
         .from("blocked_periods")
         .delete()
-        .eq("id", id);
+        .eq(
+          "id",
+          id
+        );
 
 
       if (error) {
