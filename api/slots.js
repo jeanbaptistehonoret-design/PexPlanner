@@ -8,6 +8,11 @@ const supabase = createClient(
 const DAYS_TO_SHOW = 90;
 const STEP_MINUTES = 30;
 
+
+/* =========================================================
+   OUTILS
+   ========================================================= */
+
 function pad(n) {
   return String(n).padStart(2, "0");
 }
@@ -17,19 +22,29 @@ function dateToString(date) {
 }
 
 function timeToMinutes(time) {
-  const [h, m] = String(time).substring(0, 5).split(":").map(Number);
-  return h * 60 + m;
+  if (!time) return 0;
+
+  const [hours, minutes] =
+    String(time).substring(0, 5).split(":").map(Number);
+
+  return hours * 60 + minutes;
 }
 
 function minutesToTime(minutes) {
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return `${pad(h)}:${pad(m)}:00`;
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+
+  return `${pad(hours)}:${pad(mins)}:00`;
 }
 
 function overlaps(startA, endA, startB, endB) {
   return startA < endB && endA > startB;
 }
+
+
+/* =========================================================
+   API
+   ========================================================= */
 
 export default async function handler(req, res) {
 
@@ -50,7 +65,12 @@ export default async function handler(req, res) {
       error: sessionsError
     } = await supabase
       .from("sessions")
-      .select("id, name, duration, active")
+      .select(`
+        id,
+        name,
+        duration,
+        active
+      `)
       .eq("active", true)
       .order("duration")
       .order("name");
@@ -77,17 +97,24 @@ export default async function handler(req, res) {
 
 
     /* =====================================================
-       3. PERIODE 90 JOURS
+       3. DATES EXCEPTIONNELLES
        ===================================================== */
 
     const today = new Date();
+
     today.setHours(0, 0, 0, 0);
 
     const endDate = new Date(today);
-    endDate.setDate(endDate.getDate() + DAYS_TO_SHOW);
 
-    const startDateString = dateToString(today);
-    const endDateString = dateToString(endDate);
+    endDate.setDate(
+      endDate.getDate() + DAYS_TO_SHOW
+    );
+
+    const startDateString =
+      dateToString(today);
+
+    const endDateString =
+      dateToString(endDate);
 
 
     /* =====================================================
@@ -109,7 +136,7 @@ export default async function handler(req, res) {
 
 
     /* =====================================================
-       5. BLOQUAGES
+       5. BLOQUAGES EXCEPTIONNELS
        ===================================================== */
 
     const {
@@ -127,12 +154,12 @@ export default async function handler(req, res) {
 
 
     /* =====================================================
-       6. CRENEAUX EXISTANTS
+       6. CRENEAUX DEJA EXISTANTS
        ===================================================== */
 
     const {
       data: existingSlots,
-      error: slotsError
+      error: existingSlotsError
     } = await supabase
       .from("slots")
       .select(`
@@ -152,13 +179,13 @@ export default async function handler(req, res) {
       .gte("date", startDateString)
       .lte("date", endDateString);
 
-    if (slotsError) {
-      throw slotsError;
+    if (existingSlotsError) {
+      throw existingSlotsError;
     }
 
 
     /* =====================================================
-       7. RESERVATIONS EXISTANTES
+       7. RESERVATIONS
        ===================================================== */
 
     const {
@@ -177,6 +204,10 @@ export default async function handler(req, res) {
     }
 
 
+    /* =====================================================
+       8. IDENTIFIER LES CRENEAUX DEJA RESERVES
+       ===================================================== */
+
     const bookedSlotIds = new Set(
       (bookings || []).map(
         booking => booking.slot_id
@@ -185,7 +216,7 @@ export default async function handler(req, res) {
 
 
     /* =====================================================
-       8. MAP DES CRENEAUX EXISTANTS
+       9. CONSTRUIRE UNE CARTE DES CRENEAUX EXISTANTS
        ===================================================== */
 
     const existingSlotMap = new Map();
@@ -195,13 +226,49 @@ export default async function handler(req, res) {
       const key =
         `${slot.date}_${slot.time.substring(0, 5)}_${slot.session_id}`;
 
-      existingSlotMap.set(key, slot);
+      existingSlotMap.set(
+        key,
+        slot
+      );
 
     });
 
 
     /* =====================================================
-       9. GENERATION
+       10. CONSTRUIRE LES RESERVATIONS AVEC LEURS HORAIRES
+       ===================================================== */
+
+    const reservedPeriods = [];
+
+    for (const booking of bookings || []) {
+
+      const slot =
+        (existingSlots || []).find(
+          s => s.id === booking.slot_id
+        );
+
+      if (!slot || !slot.sessions) {
+        continue;
+      }
+
+      const start =
+        timeToMinutes(slot.time);
+
+      const end =
+        start + Number(
+          slot.sessions.duration
+        );
+
+      reservedPeriods.push({
+        date: slot.date,
+        start,
+        end
+      });
+    }
+
+
+    /* =====================================================
+       11. GENERATION
        ===================================================== */
 
     const slotsToCreate = [];
@@ -222,10 +289,9 @@ export default async function handler(req, res) {
         currentDate.getDay();
 
 
-      /*
-       Une exception remplace les horaires
-       habituels pour cette date.
-      */
+      /* ===================================================
+         HORAIRES DU JOUR
+         =================================================== */
 
       const exception =
         (specialHours || []).find(
@@ -239,12 +305,20 @@ export default async function handler(req, res) {
       let openingEnd = null;
 
 
+      /*
+       Une ouverture exceptionnelle remplace
+       les horaires normaux de la journée.
+      */
+
       if (exception) {
 
-        isOpen =
-          exception.is_open === true;
+        if (
+          exception.is_open === true &&
+          exception.start_time &&
+          exception.end_time
+        ) {
 
-        if (isOpen) {
+          isOpen = true;
 
           openingStart =
             timeToMinutes(
@@ -270,7 +344,9 @@ export default async function handler(req, res) {
 
         if (
           normalHours &&
-          normalHours.is_open === true
+          normalHours.is_open === true &&
+          normalHours.start_time &&
+          normalHours.end_time
         ) {
 
           isOpen = true;
@@ -290,10 +366,6 @@ export default async function handler(req, res) {
       }
 
 
-      /*
-       Jour fermé
-      */
-
       if (
         !isOpen ||
         openingStart === null ||
@@ -304,18 +376,16 @@ export default async function handler(req, res) {
 
 
       /* ===================================================
-         10. CHAQUE PACK
+         12. GENERER CHAQUE PACK
          =================================================== */
 
-      for (const session of sessions) {
+      for (
+        const session of sessions
+      ) {
 
-        const duration =
+        const sessionDuration =
           Number(session.duration);
 
-
-        /*
-         Départs toutes les 30 minutes.
-        */
 
         for (
           let start = openingStart;
@@ -324,12 +394,12 @@ export default async function handler(req, res) {
         ) {
 
           const finish =
-            start + duration;
+            start + sessionDuration;
 
 
           /*
-           Le pack doit tenir entièrement
-           dans les horaires.
+           La séance doit tenir entièrement
+           dans les horaires d'ouverture.
           */
 
           if (
@@ -348,8 +418,7 @@ export default async function handler(req, res) {
 
 
           /*
-           Si ce créneau existe déjà dans
-           la base, on ne le recrée pas.
+           Ce créneau existe déjà.
           */
 
           if (
@@ -359,17 +428,25 @@ export default async function handler(req, res) {
           }
 
 
-          /* ===============================================
-             11. BLOCAGE MANUEL
-             =============================================== */
+          /* =================================================
+             13. BLOCAGE MANUEL
+             ================================================= */
 
-          const blocked =
+          const manuallyBlocked =
             (blockedPeriods || []).some(
               block => {
 
                 if (
                   block.date !==
                   dateString
+                ) {
+                  return false;
+                }
+
+
+                if (
+                  !block.start_time ||
+                  !block.end_time
                 ) {
                   return false;
                 }
@@ -397,6 +474,101 @@ export default async function handler(req, res) {
             );
 
 
+          if (manuallyBlocked) {
+
+            slotsToCreate.push({
+
+              date:
+                dateString,
+
+              time,
+
+              session_id:
+                session.id,
+
+              status:
+                "unavailable",
+
+              source:
+                "pilotexperience",
+
+              note:
+                "Bloqué"
+
+            });
+
+            continue;
+          }
+
+
+          /* =================================================
+             14. VERIFIER LES RESERVATIONS EXISTANTES
+             ================================================= */
+
+          const reservationConflict =
+            reservedPeriods.some(
+              reservation => {
+
+                if (
+                  reservation.date !==
+                  dateString
+                ) {
+                  return false;
+                }
+
+
+                return overlaps(
+                  start,
+                  finish,
+                  reservation.start,
+                  reservation.end
+                );
+
+              }
+            );
+
+
+          /*
+           IMPORTANT :
+
+           On crée uniquement un créneau
+           disponible s'il ne chevauche
+           aucune réservation.
+          */
+
+          if (
+            reservationConflict
+          ) {
+
+            slotsToCreate.push({
+
+              date:
+                dateString,
+
+              time,
+
+              session_id:
+                session.id,
+
+              status:
+                "unavailable",
+
+              source:
+                "pilotexperience",
+
+              note:
+                "Indisponible — réservation existante"
+
+            });
+
+            continue;
+          }
+
+
+          /* =================================================
+             15. CRENEAU DISPONIBLE
+             ================================================= */
+
           slotsToCreate.push({
 
             date:
@@ -408,17 +580,13 @@ export default async function handler(req, res) {
               session.id,
 
             status:
-              blocked
-                ? "unavailable"
-                : "available",
+              "available",
 
             source:
               "pilotexperience",
 
             note:
-              blocked
-                ? "Bloqué"
-                : null
+              null
 
           });
 
@@ -430,55 +598,37 @@ export default async function handler(req, res) {
 
 
     /* =====================================================
-       12. CREER LES NOUVEAUX CRENEAUX
+       16. ENREGISTRER LES CRENEAUX
        ===================================================== */
 
-    if (
-      slotsToCreate.length > 0
+    const BATCH_SIZE = 500;
+
+    for (
+      let i = 0;
+      i < slotsToCreate.length;
+      i += BATCH_SIZE
     ) {
 
-      /*
-       On découpe éventuellement en lots
-       pour éviter une requête trop importante.
-      */
-
-      const BATCH_SIZE = 500;
-
-
-      for (
-        let i = 0;
-        i < slotsToCreate.length;
-        i += BATCH_SIZE
-      ) {
-
-        const batch =
-          slotsToCreate.slice(
-            i,
-            i + BATCH_SIZE
-          );
+      const batch =
+        slotsToCreate.slice(
+          i,
+          i + BATCH_SIZE
+        );
 
 
-        const {
-          error: insertError
-        } = await supabase
-          .from("slots")
-          .insert(batch);
+      const {
+        error: insertError
+      } = await supabase
+        .from("slots")
+        .insert(batch);
 
 
-        if (insertError) {
+      if (insertError) {
 
-          /*
-           Si un autre appel a créé
-           les mêmes créneaux entre-temps,
-           on continue.
-          */
-
-          console.error(
-            "Erreur génération créneaux:",
-            insertError
-          );
-
-        }
+        console.error(
+          "Erreur génération créneaux :",
+          insertError
+        );
 
       }
 
@@ -486,7 +636,7 @@ export default async function handler(req, res) {
 
 
     /* =====================================================
-       13. RELIRE LES CRENEAUX
+       17. RELIRE LE PLANNING
        ===================================================== */
 
     const {
@@ -508,10 +658,17 @@ export default async function handler(req, res) {
           duration
         )
       `)
-      .gte("date", startDateString)
-      .lte("date", endDateString)
+      .gte(
+        "date",
+        startDateString
+      )
+      .lte(
+        "date",
+        endDateString
+      )
       .order("date")
       .order("time");
+
 
     if (finalError) {
       throw finalError;
@@ -519,11 +676,16 @@ export default async function handler(req, res) {
 
 
     /* =====================================================
-       14. RESERVATIONS = INDISPONIBLE
+       18. RENVOYER LES CRENEAUX
        ===================================================== */
 
     const result =
       (finalSlots || []).map(slot => {
+
+        /*
+         Une réservation rend son créneau
+         indisponible dans le calendrier.
+        */
 
         if (
           bookedSlotIds.has(
@@ -543,10 +705,6 @@ export default async function handler(req, res) {
 
       });
 
-
-    /* =====================================================
-       15. REPONSE
-       ===================================================== */
 
     return res.status(200).json(
       result
