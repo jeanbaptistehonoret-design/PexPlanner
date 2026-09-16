@@ -8,45 +8,28 @@ const supabase = createClient(
 const DAYS_TO_SHOW = 90;
 const STEP_MINUTES = 30;
 
-
-/* =========================================================
-   OUTILS
-   ========================================================= */
-
-function pad(number) {
-  return String(number).padStart(2, "0");
+function pad(n) {
+  return String(n).padStart(2, "0");
 }
 
 function dateToString(date) {
-  return (
-    date.getFullYear() +
-    "-" +
-    pad(date.getMonth() + 1) +
-    "-" +
-    pad(date.getDate())
-  );
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
 function timeToMinutes(time) {
-  const [hours, minutes] = time.substring(0, 5).split(":").map(Number);
-  return hours * 60 + minutes;
+  const [h, m] = String(time).substring(0, 5).split(":").map(Number);
+  return h * 60 + m;
 }
 
 function minutesToTime(minutes) {
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-
-  return `${pad(hours)}:${pad(mins)}:00`;
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  return `${pad(h)}:${pad(m)}:00`;
 }
 
 function overlaps(startA, endA, startB, endB) {
   return startA < endB && endA > startB;
 }
-
-
-/* =========================================================
-   API
-   ========================================================= */
 
 export default async function handler(req, res) {
 
@@ -58,38 +41,28 @@ export default async function handler(req, res) {
 
   try {
 
-    /*
-     -------------------------------------------------------
-     1. RECUPERER LES PACKS
-     -------------------------------------------------------
-    */
+    /* =====================================================
+       1. PACKS
+       ===================================================== */
 
     const {
       data: sessions,
       error: sessionsError
     } = await supabase
       .from("sessions")
-      .select(`
-        id,
-        name,
-        duration,
-        active
-      `)
+      .select("id, name, duration, active")
       .eq("active", true)
       .order("duration")
       .order("name");
-
 
     if (sessionsError) {
       throw sessionsError;
     }
 
 
-    /*
-     -------------------------------------------------------
-     2. HORAIRES HABITUELS
-     -------------------------------------------------------
-    */
+    /* =====================================================
+       2. HORAIRES HABITUELS
+       ===================================================== */
 
     const {
       data: openingHours,
@@ -98,55 +71,46 @@ export default async function handler(req, res) {
       .from("opening_hours")
       .select("*");
 
-
     if (openingError) {
       throw openingError;
     }
 
 
-    /*
-     -------------------------------------------------------
-     3. OUVERTURES / FERMETURES EXCEPTIONNELLES
-     -------------------------------------------------------
-    */
+    /* =====================================================
+       3. PERIODE 90 JOURS
+       ===================================================== */
 
     const today = new Date();
-
     today.setHours(0, 0, 0, 0);
 
     const endDate = new Date(today);
+    endDate.setDate(endDate.getDate() + DAYS_TO_SHOW);
 
-    endDate.setDate(
-      endDate.getDate() + DAYS_TO_SHOW
-    );
+    const startDateString = dateToString(today);
+    const endDateString = dateToString(endDate);
 
-    const startDateString =
-      dateToString(today);
 
-    const endDateString =
-      dateToString(endDate);
-
+    /* =====================================================
+       4. OUVERTURES EXCEPTIONNELLES
+       ===================================================== */
 
     const {
       data: specialHours,
-      error: specialHoursError
+      error: specialError
     } = await supabase
       .from("special_hours")
       .select("*")
       .gte("date", startDateString)
       .lte("date", endDateString);
 
-
-    if (specialHoursError) {
-      throw specialHoursError;
+    if (specialError) {
+      throw specialError;
     }
 
 
-    /*
-     -------------------------------------------------------
-     4. BLOQUAGES MANUELS
-     -------------------------------------------------------
-    */
+    /* =====================================================
+       5. BLOQUAGES
+       ===================================================== */
 
     const {
       data: blockedPeriods,
@@ -157,24 +121,14 @@ export default async function handler(req, res) {
       .gte("date", startDateString)
       .lte("date", endDateString);
 
-
     if (blockedError) {
       throw blockedError;
     }
 
 
-    /*
-     -------------------------------------------------------
-     5. CRENEAUX EXISTANTS
-     -------------------------------------------------------
-     
-     On conserve les créneaux déjà créés dans la base :
-     - réservés
-     - partenaires
-     - bloqués manuellement
-
-     Ils ne doivent pas être recréés ou écrasés.
-    */
+    /* =====================================================
+       6. CRENEAUX EXISTANTS
+       ===================================================== */
 
     const {
       data: existingSlots,
@@ -198,17 +152,14 @@ export default async function handler(req, res) {
       .gte("date", startDateString)
       .lte("date", endDateString);
 
-
     if (slotsError) {
       throw slotsError;
     }
 
 
-    /*
-     -------------------------------------------------------
-     6. RESERVATIONS
-     -------------------------------------------------------
-    */
+    /* =====================================================
+       7. RESERVATIONS EXISTANTES
+       ===================================================== */
 
     const {
       data: bookings,
@@ -221,11 +172,21 @@ export default async function handler(req, res) {
         source
       `);
 
-
     if (bookingsError) {
       throw bookingsError;
     }
 
+
+    const bookedSlotIds = new Set(
+      (bookings || []).map(
+        booking => booking.slot_id
+      )
+    );
+
+
+    /* =====================================================
+       8. MAP DES CRENEAUX EXISTANTS
+       ===================================================== */
 
     const existingSlotMap = new Map();
 
@@ -239,43 +200,43 @@ export default async function handler(req, res) {
     });
 
 
-    /*
-     -------------------------------------------------------
-     7. GENERATION AUTOMATIQUE
-     -------------------------------------------------------
-    */
+    /* =====================================================
+       9. GENERATION
+       ===================================================== */
 
     const slotsToCreate = [];
 
 
     for (
-      let date = new Date(today);
-      date <= endDate;
-      date.setDate(date.getDate() + 1)
+      let currentDate = new Date(today);
+      currentDate <= endDate;
+      currentDate.setDate(
+        currentDate.getDate() + 1
+      )
     ) {
 
       const dateString =
-        dateToString(date);
+        dateToString(currentDate);
 
       const dayOfWeek =
-        date.getDay();
+        currentDate.getDay();
 
 
       /*
-       Une date exceptionnelle remplace
-       l'horaire habituel de ce jour.
+       Une exception remplace les horaires
+       habituels pour cette date.
       */
 
       const exception =
-        (specialHours || [])
-          .find(
-            item => item.date === dateString
-          );
+        (specialHours || []).find(
+          item =>
+            item.date === dateString
+        );
 
 
       let isOpen = false;
-      let startMinutes = null;
-      let endMinutes = null;
+      let openingStart = null;
+      let openingEnd = null;
 
 
       if (exception) {
@@ -285,12 +246,12 @@ export default async function handler(req, res) {
 
         if (isOpen) {
 
-          startMinutes =
+          openingStart =
             timeToMinutes(
               exception.start_time
             );
 
-          endMinutes =
+          openingEnd =
             timeToMinutes(
               exception.end_time
             );
@@ -299,29 +260,29 @@ export default async function handler(req, res) {
 
       } else {
 
-        const normal =
-          (openingHours || [])
-            .find(
-              item =>
-                item.day_of_week === dayOfWeek
-            );
+        const normalHours =
+          (openingHours || []).find(
+            item =>
+              item.day_of_week ===
+              dayOfWeek
+          );
 
 
         if (
-          normal &&
-          normal.is_open === true
+          normalHours &&
+          normalHours.is_open === true
         ) {
 
           isOpen = true;
 
-          startMinutes =
+          openingStart =
             timeToMinutes(
-              normal.start_time
+              normalHours.start_time
             );
 
-          endMinutes =
+          openingEnd =
             timeToMinutes(
-              normal.end_time
+              normalHours.end_time
             );
 
         }
@@ -333,33 +294,47 @@ export default async function handler(req, res) {
        Jour fermé
       */
 
-      if (!isOpen) {
+      if (
+        !isOpen ||
+        openingStart === null ||
+        openingEnd === null
+      ) {
         continue;
       }
 
 
-      /*
-       Génération de chaque pack
-      */
+      /* ===================================================
+         10. CHAQUE PACK
+         =================================================== */
 
       for (const session of sessions) {
 
+        const duration =
+          Number(session.duration);
+
+
+        /*
+         Départs toutes les 30 minutes.
+        */
+
         for (
-          let start = startMinutes;
-          start < endMinutes;
+          let start = openingStart;
+          start < openingEnd;
           start += STEP_MINUTES
         ) {
 
           const finish =
-            start + session.duration;
+            start + duration;
 
 
           /*
-           Le pack doit rentrer entièrement
-           dans la plage d'ouverture.
+           Le pack doit tenir entièrement
+           dans les horaires.
           */
 
-          if (finish > endMinutes) {
+          if (
+            finish > openingEnd
+          ) {
             continue;
           }
 
@@ -373,28 +348,28 @@ export default async function handler(req, res) {
 
 
           /*
-           Existe déjà
+           Si ce créneau existe déjà dans
+           la base, on ne le recrée pas.
           */
 
           if (
             existingSlotMap.has(key)
           ) {
-
             continue;
-
           }
 
 
-          /*
-           Vérifier les périodes bloquées
-          */
+          /* ===============================================
+             11. BLOCAGE MANUEL
+             =============================================== */
 
-          const manuallyBlocked =
-            (blockedPeriods || [])
-              .some(block => {
+          const blocked =
+            (blockedPeriods || []).some(
+              block => {
 
                 if (
-                  block.date !== dateString
+                  block.date !==
+                  dateString
                 ) {
                   return false;
                 }
@@ -418,46 +393,9 @@ export default async function handler(req, res) {
                   blockEnd
                 );
 
-              });
+              }
+            );
 
-
-          if (manuallyBlocked) {
-
-            /*
-             On crée quand même le créneau,
-             mais comme indisponible, afin de
-             conserver une trace visible dans l'admin.
-            */
-
-            slotsToCreate.push({
-
-              date:
-                dateString,
-
-              time,
-
-              session_id:
-                session.id,
-
-              status:
-                "unavailable",
-
-              source:
-                "pilotexperience",
-
-              note:
-                "Bloqué"
-
-            });
-
-            continue;
-
-          }
-
-
-          /*
-           Créneau disponible
-          */
 
           slotsToCreate.push({
 
@@ -470,13 +408,17 @@ export default async function handler(req, res) {
               session.id,
 
             status:
-              "available",
+              blocked
+                ? "unavailable"
+                : "available",
 
             source:
               "pilotexperience",
 
             note:
-              null
+              blocked
+                ? "Bloqué"
+                : null
 
           });
 
@@ -487,43 +429,65 @@ export default async function handler(req, res) {
     }
 
 
-    /*
-     -------------------------------------------------------
-     8. ENREGISTRER LES NOUVEAUX CRENEAUX
-     -------------------------------------------------------
-    */
+    /* =====================================================
+       12. CREER LES NOUVEAUX CRENEAUX
+       ===================================================== */
 
-    if (slotsToCreate.length > 0) {
+    if (
+      slotsToCreate.length > 0
+    ) {
 
-      const {
-        error: insertError
-      } = await supabase
-        .from("slots")
-        .insert(slotsToCreate);
+      /*
+       On découpe éventuellement en lots
+       pour éviter une requête trop importante.
+      */
+
+      const BATCH_SIZE = 500;
 
 
-      if (insertError) {
+      for (
+        let i = 0;
+        i < slotsToCreate.length;
+        i += BATCH_SIZE
+      ) {
 
-        /*
-         Une requête simultanée peut avoir essayé
-         de créer les mêmes créneaux.
-        */
+        const batch =
+          slotsToCreate.slice(
+            i,
+            i + BATCH_SIZE
+          );
 
-        console.error(
-          "Generation slots:",
-          insertError
-        );
+
+        const {
+          error: insertError
+        } = await supabase
+          .from("slots")
+          .insert(batch);
+
+
+        if (insertError) {
+
+          /*
+           Si un autre appel a créé
+           les mêmes créneaux entre-temps,
+           on continue.
+          */
+
+          console.error(
+            "Erreur génération créneaux:",
+            insertError
+          );
+
+        }
 
       }
 
     }
 
 
-    /*
-     -------------------------------------------------------
-     9. RELIRE LE PLANNING
-     -------------------------------------------------------
-    */
+    /* =====================================================
+       13. RELIRE LES CRENEAUX
+       ===================================================== */
 
     const {
       data: finalSlots,
@@ -549,64 +513,44 @@ export default async function handler(req, res) {
       .order("date")
       .order("time");
 
-
     if (finalError) {
       throw finalError;
     }
 
 
-    /*
-     -------------------------------------------------------
-     10. MARQUER LES CRENEAUX RESERVES
-     -------------------------------------------------------
-     
-     Si un booking existe, on ne renvoie jamais
-     le créneau comme disponible.
-    */
-
-    const bookingSlotIds =
-      new Set(
-        (bookings || [])
-          .map(booking => booking.slot_id)
-      );
-
+    /* =====================================================
+       14. RESERVATIONS = INDISPONIBLE
+       ===================================================== */
 
     const result =
-      (finalSlots || [])
-        .map(slot => {
+      (finalSlots || []).map(slot => {
 
-          const isBooked =
-            bookingSlotIds.has(
-              slot.id
-            );
+        if (
+          bookedSlotIds.has(
+            slot.id
+          )
+        ) {
 
+          return {
+            ...slot,
+            status:
+              "unavailable"
+          };
 
-          if (isBooked) {
+        }
 
-            return {
+        return slot;
 
-              ...slot,
-
-              status:
-                "unavailable"
-
-            };
-
-          }
+      });
 
 
-          return slot;
+    /* =====================================================
+       15. REPONSE
+       ===================================================== */
 
-        });
-
-
-    /*
-     -------------------------------------------------------
-     11. REPONSE
-     -------------------------------------------------------
-    */
-
-    return res.status(200).json(result);
+    return res.status(200).json(
+      result
+    );
 
 
   } catch (error) {
