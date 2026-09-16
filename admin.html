@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PexPlanner — Administration</title>
+
+<style>
+*{box-sizing:border-box}
+
+body{
+  margin:0;
+  font-family:Arial,Helvetica,sans-serif;
+  background:#f4f6f8;
+  color:#17212b;
+}
+
+.container{
+  max-width:1200px;
+  margin:auto;
+  padding:30px 18px 50px;
+}
+
+.card{
+  background:#fff;
+  border:1px solid #dfe5eb;
+  border-radius:18px;
+  box-shadow:0 8px 30px rgba(16,41,67,.07);
+  overflow:hidden;
+}
+
+.header{
+  background:#102943;
+  color:#fff;
+  padding:25px;
+}
+
+.header h1{
+  margin:0;
+  font-size:25px;
+}
+
+.header p{
+  margin:7px 0 0;
+  opacity:.75;
+}
+
+.content{
+  padding:24px;
+}
+
+.login{
+  max-width:420px;
+  margin:70px auto;
+}
+
+label{
+  display:block;
+  margin-bottom:7px;
+  font-size:13px;
+  font-weight:bold;
+}
+
+input,select{
+  width:100%;
+  padding:11px 12px;
+  border:1px solid #ccd5dd;
+  border-radius:10px;
+  font:inherit;
+  margin-bottom:14px;
+}
+
+button{
+  border:0;
+  border-radius:10px;
+  padding:11px 15px;
+  cursor:pointer;
+  font-weight:bold;
+}
+
+.primary{
+  background:#102943;
+  color:white;
+}
+
+.secondary{
+  background:#eef2f5;
+  color:#17212b;
+}
+
+.danger{
+  background:#fff0ee;
+  color:#9d3026;
+}
+
+.success{
+  background:#edf8f1;
+  color:#197446;
+}
+
+.hidden{
+  display:none;
+}
+
+.top{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:15px;
+  flex-wrap:wrap;
+  margin-bottom:20px;
+}
+
+.top h2{
+  margin:0;
+}
+
+.grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:20px;
+}
+
+.panel{
+  border:1px solid #e0e5ea;
+  border-radius:14px;
+  padding:18px;
+}
+
+.panel h3{
+  margin-top:0;
+}
+
+.row{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  padding:12px;
+  border:1px solid #e1e6eb;
+  border-radius:10px;
+  margin-top:9px;
+  background:#fff;
+}
+
+.meta{
+  color:#6b7785;
+  font-size:12px;
+  margin-top:4px;
+}
+
+.badge{
+  display:inline-block;
+  padding:4px 8px;
+  border-radius:999px;
+  font-size:10px;
+  background:#eef2f5;
+}
+
+.actions{
+  display:flex;
+  gap:6px;
+  flex-wrap:wrap;
+}
+
+.message{
+  display:none;
+  padding:11px 13px;
+  border-radius:10px;
+  margin-bottom:15px;
+  font-size:13px;
+}
+
+.message.show{
+  display:block;
+}
+
+.message.error{
+  background:#fff0ee;
+  color:#9d3026;
+}
+
+.message.ok{
+  background:#edf8f1;
+  color:#197446;
+}
+
+@media(max-width:850px){
+  .grid{
+    grid-template-columns:1fr;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div id="loginScreen" class="login">
+  <div class="card">
+    <div class="header">
+      <h1>PexPlanner</h1>
+      <p>Administration PilotExperience</p>
+    </div>
+
+    <div class="content">
+      <div id="loginMessage" class="message"></div>
+
+      <label for="password">Mot de passe administrateur</label>
+
+      <input
+        id="password"
+        type="password"
+        placeholder="Mot de passe"
+      >
+
+      <button
+        class="primary"
+        style="width:100%"
+        onclick="login()"
+      >
+        Accéder au planning
+      </button>
+    </div>
+  </div>
+</div>
+
+
+<div id="adminScreen" class="hidden">
+
+  <div class="container">
+
+    <div class="card">
+
+      <div class="header">
+        <h1>PexPlanner — Administration</h1>
+        <p>Gestion du planning PilotExperience</p>
+      </div>
+
+      <div class="content">
+
+        <div id="adminMessage" class="message"></div>
+
+        <div class="top">
+
+          <div>
+            <h2>Planning</h2>
+            <div class="meta">
+              Gestion des créneaux et des réservations
+            </div>
+          </div>
+
+          <button
+            class="secondary"
+            onclick="logout()"
+          >
+            Déconnexion
+          </button>
+
+        </div>
+
+
+        <div class="grid">
+
+          <div class="panel">
+
+            <h3>Ajouter un créneau</h3>
+
+            <label>Date</label>
+
+            <input
+              id="newDate"
+              type="date"
+            >
+
+            <label>Heure</label>
+
+            <input
+              id="newTime"
+              type="time"
+            >
+
+            <label>Séance</label>
+
+            <select id="newSession"></select>
+
+            <label>Type de créneau</label>
+
+            <select id="newSource">
+
+              <option value="pilotexperience">
+                PilotExperience
+              </option>
+
+              <option value="partner">
+                Partenaire
+              </option>
+
+            </select>
+
+            <button
+              class="primary"
+              onclick="createSlot()"
+            >
+              Ajouter le créneau
+            </button>
+
+          </div>
+
+
+          <div class="panel">
+
+            <h3>Planning actuel</h3>
+
+            <div id="slots">
+              Chargement...
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <div class="panel" style="margin-top:20px">
+
+          <h3>Réservations</h3>
+
+          <div id="bookings">
+            Chargement...
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+<script>
+
+const API = "/api";
+
+let password = "";
+let sessions = [];
+
+
+function showMessage(element,message,type){
+
+  element.textContent = message;
+
+  element.className =
+    "message show " + type;
+
+}
+
+
+async function login(){
+
+  const input =
+    document.getElementById("password");
+
+  password =
+    input.value.trim();
+
+  if(!password){
+
+    showMessage(
+      document.getElementById("loginMessage"),
+      "Entrez votre mot de passe.",
+      "error"
+    );
+
+    return;
+  }
+
+
+  try{
+
+    const response =
+      await fetch(
+        API + "/admin",
+        {
+          method:"POST",
+
+          headers:{
+            "Content-Type":
+              "application/json"
+          },
+
+          body:JSON.stringify({
+            action:"login",
+            password:password
+          })
+        }
+      );
+
+
+    const result =
+      await response.json();
+
+
+    if(!response.ok){
+
+      throw new Error(
+        result.error ||
+        "Mot de passe incorrect."
+      );
+
+    }
+
+
+    document
+      .getElementById("loginScreen")
+      .classList.add("hidden");
+
+    document
+      .getElementById("adminScreen")
+      .classList.remove("hidden");
+
+
+    await loadAdmin();
+
+
+  }catch(error){
+
+    showMessage(
+      document.getElementById("loginMessage"),
+      error.message,
+      "error"
+    );
+
+  }
+
+}
+
+
+function logout(){
+
+  password="";
+
+  document
+    .getElementById("adminScreen")
+    .classList.add("hidden");
+
+  document
+    .getElementById("loginScreen")
+    .classList.remove("hidden");
+
+  document.getElementById("password").value="";
+}
+
+
+async function adminRequest(body){
+
+  const response =
+    await fetch(
+      API + "/admin",
+      {
+        method:"POST",
+
+        headers:{
+          "Content-Type":
+            "application/json"
+        },
+
+        body:JSON.stringify({
+          ...body,
+          password:password
+        })
+      }
+    );
+
+
+  const result =
+    await response.json();
+
+
+  if(!response.ok){
+
+    throw new Error(
+      result.error ||
+      "Erreur serveur"
+    );
+
+  }
+
+
+  return result;
+
+}
+
+
+async function loadAdmin(){
+
+  try{
+
+    const result =
+      await adminRequest({
+        action:"data"
+      });
+
+
+    sessions =
+      result.sessions || [];
+
+
+    const select =
+      document.getElementById(
+        "newSession"
+      );
+
+
+    select.innerHTML="";
+
+
+    sessions.forEach(session=>{
+
+      const option =
+        document.createElement("option");
+
+      option.value =
+        session.id;
+
+      option.textContent =
+        session.name;
+
+      select.appendChild(option);
+
+    });
+
+
+    renderSlots(
+      result.slots || []
+    );
+
+    renderBookings(
+      result.bookings || []
+    );
+
+
+  }catch(error){
+
+    showMessage(
+      document.getElementById("adminMessage"),
+      error.message,
+      "error"
+    );
+
+  }
+
+}
+
+
+function renderSlots(slots){
+
+  const container =
+    document.getElementById("slots");
+
+
+  if(!slots.length){
+
+    container.innerHTML =
+      '<div class="meta">Aucun créneau.</div>';
+
+    return;
+
+  }
+
+
+  container.innerHTML="";
+
+
+  slots.forEach(slot=>{
+
+    const session =
+      slot.sessions;
+
+
+    const row =
+      document.createElement("div");
+
+    row.className="row";
+
+
+    const available =
+      slot.status === "available";
+
+
+    const statusText =
+      available
+        ? "Disponible"
+        : "Indisponible";
+
+
+    const statusClass =
+      available
+        ? "success"
+        : "danger";
+
+
+    row.innerHTML=`
+
+      <div>
+
+        <strong>
+          ${formatDate(slot.date)}
+          — ${slot.time.substring(0,5)}
+        </strong>
+
+        <div class="meta">
+          ${session?.name || ""}
+        </div>
+
+        <span class="badge">
+          ${slot.source === "partner"
+            ? "Partenaire"
+            : "PilotExperience"}
+        </span>
+
+        <span
+          class="badge"
+          style="margin-left:5px"
+        >
+          ${statusText}
+        </span>
+
+      </div>
+
+      <div class="actions">
+
+        ${
+          available
+
+          ?
+
+          `<button
+            class="danger"
+            onclick="changeSlot(
+              '${slot.id}',
+              'unavailable'
+            )"
+          >
+            Bloquer
+          </button>`
+
+          :
+
+          `<button
+            class="success"
+            onclick="changeSlot(
+              '${slot.id}',
+              'available'
+            )"
+          >
+            Libérer
+          </button>`
+        }
+
+      </div>
+    `;
+
+
+    container.appendChild(row);
+
+  });
+
+}
+
+
+function renderBookings(bookings){
+
+  const container =
+    document.getElementById(
+      "bookings"
+    );
+
+
+  if(!bookings.length){
+
+    container.innerHTML =
+      '<div class="meta">Aucune réservation.</div>';
+
+    return;
+
+  }
+
+
+  container.innerHTML="";
+
+
+  bookings.forEach(booking=>{
+
+    const row =
+      document.createElement("div");
+
+    row.className="row";
+
+
+    row.innerHTML=`
+
+      <div>
+
+        <strong>
+          ${booking.first_name}
+          ${booking.last_name}
+        </strong>
+
+        <div class="meta">
+          Billet :
+          ${booking.ticket}
+        </div>
+
+        <div class="meta">
+          ${booking.email}
+        </div>
+
+      </div>
+
+      <span class="badge">
+        ${booking.source}
+      </span>
+
+    `;
+
+
+    container.appendChild(row);
+
+  });
+
+}
+
+
+function formatDate(date){
+
+  return new Date(
+    date + "T12:00:00"
+  ).toLocaleDateString(
+    "fr-FR",
+    {
+      day:"2-digit",
+      month:"2-digit",
+      year:"numeric"
+    }
+  );
+
+}
+
+
+async function createSlot(){
+
+  const date =
+    document.getElementById(
+      "newDate"
+    ).value;
+
+  const time =
+    document.getElementById(
+      "newTime"
+    ).value;
+
+  const sessionId =
+    document.getElementById(
+      "newSession"
+    ).value;
+
+  const source =
+    document.getElementById(
+      "newSource"
+    ).value;
+
+
+  if(!date || !time || !sessionId){
+
+    showMessage(
+      document.getElementById("adminMessage"),
+      "Complétez la date, l'heure et la séance.",
+      "error"
+    );
+
+    return;
+
+  }
+
+
+  try{
+
+    await adminRequest({
+
+      action:"createSlot",
+
+      date:date,
+
+      time:time,
+
+      sessionId:sessionId,
+
+      source:source
+
+    });
+
+
+    showMessage(
+      document.getElementById("adminMessage"),
+      "Créneau créé.",
+      "ok"
+    );
+
+
+    await loadAdmin();
+
+
+  }catch(error){
+
+    showMessage(
+      document.getElementById("adminMessage"),
+      error.message,
+      "error"
+    );
+
+  }
+
+}
+
+
+async function changeSlot(id,status){
+
+  try{
+
+    await adminRequest({
+
+      action:"changeSlot",
+
+      slotId:id,
+
+      status:status
+
+    });
+
+
+    await loadAdmin();
+
+
+  }catch(error){
+
+    showMessage(
+      document.getElementById("adminMessage"),
+      error.message,
+      "error"
+    );
+
+  }
+
+}
+
+</script>
+
+</body>
+</html>
