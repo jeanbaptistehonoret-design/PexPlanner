@@ -1,3236 +1,1154 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PexPlanner — Administration</title>
+import { createClient } from "@supabase/supabase-js";
 
-<style>
-* {
-  box-sizing: border-box;
-}
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SECRET_KEY
+);
 
-body {
-  margin: 0;
-  font-family: Arial, Helvetica, sans-serif;
-  background: #f4f6f8;
-  color: #17212b;
-}
+export default async function handler(req, res) {
 
-.hidden {
-  display: none !important;
-}
-
-.container {
-  max-width: 1250px;
-  margin: auto;
-  padding: 25px 16px 50px;
-}
-
-.card {
-  background: white;
-  border: 1px solid #dfe5eb;
-  border-radius: 18px;
-  box-shadow: 0 8px 30px rgba(16, 41, 67, 0.07);
-  overflow: hidden;
-}
-
-.header {
-  background: #102943;
-  color: white;
-  padding: 23px 25px;
-}
-
-.header h1 {
-  margin: 0;
-  font-size: 24px;
-}
-
-.header p {
-  margin: 7px 0 0;
-  opacity: 0.75;
-  font-size: 14px;
-}
-
-.content {
-  padding: 24px;
-}
-
-label {
-  display: block;
-  font-size: 13px;
-  font-weight: 700;
-  margin-bottom: 7px;
-}
-
-input,
-select,
-textarea {
-  width: 100%;
-  padding: 11px 12px;
-  border: 1px solid #ccd5dd;
-  border-radius: 10px;
-  background: white;
-  color: #17212b;
-  font: inherit;
-}
-
-button {
-  font: inherit;
-  cursor: pointer;
-}
-
-.btn {
-  border: 0;
-  border-radius: 10px;
-  padding: 11px 15px;
-  font-weight: 700;
-}
-
-.primary {
-  background: #102943;
-  color: white;
-}
-
-.secondary {
-  background: #eef2f5;
-  color: #17212b;
-}
-
-.danger {
-  background: #fff0ee;
-  color: #9d3026;
-}
-
-.success {
-  background: #edf8f1;
-  color: #197446;
-}
-
-.message {
-  display: none;
-  padding: 12px 14px;
-  border-radius: 10px;
-  margin-bottom: 18px;
-  font-size: 13px;
-}
-
-.message.show {
-  display: block;
-}
-
-.message.error {
-  background: #fff0ee;
-  border: 1px solid #efc4bf;
-  color: #9d3026;
-}
-
-.message.success {
-  background: #edf8f1;
-  border: 1px solid #bde4ca;
-  color: #197446;
-}
-
-/* LOGIN */
-
-.login {
-  max-width: 420px;
-  margin: 80px auto;
-  padding: 15px;
-}
-
-/* TOPBAR */
-
-.topbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 15px;
-  flex-wrap: wrap;
-  margin-bottom: 20px;
-}
-
-.topbar h2 {
-  margin: 0;
-  font-size: 22px;
-}
-
-.subtitle {
-  margin-top: 5px;
-  color: #6b7785;
-  font-size: 13px;
-}
-
-/* CONTROLS */
-
-.controls {
-  display: flex;
-  gap: 10px;
-  align-items: end;
-  flex-wrap: wrap;
-  margin-bottom: 20px;
-}
-
-.control-field {
-  min-width: 190px;
-  flex: 1;
-}
-
-/* CALENDRIER */
-
-.calendar-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-}
-
-.calendar-header h3 {
-  margin: 0;
-  text-transform: capitalize;
-}
-
-.calendar-nav {
-  display: flex;
-  gap: 6px;
-}
-
-.calendar-nav button {
-  width: 38px;
-  height: 38px;
-  border: 1px solid #dfe5eb;
-  border-radius: 9px;
-  background: white;
-  font-size: 20px;
-}
-
-.calendar {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 7px;
-}
-
-.weekday {
-  text-align: center;
-  font-size: 10px;
-  font-weight: 700;
-  color: #6b7785;
-  text-transform: uppercase;
-}
-
-.day {
-  min-height: 140px;
-  border: 1px solid #dfe5eb;
-  border-radius: 11px;
-  padding: 7px;
-  background: #fafbfc;
-}
-
-.day.empty {
-  background: transparent;
-  border: 0;
-}
-
-.day-number {
-  font-size: 12px;
-  font-weight: 700;
-  margin-bottom: 6px;
-}
-
-.slot {
-  background: white;
-  border-radius: 8px;
-  padding: 8px;
-  margin-top: 6px;
-  border: 1px solid #ccd6df;
-}
-
-.slot.available {
-  border-left: 4px solid #2d8a58;
-}
-
-.slot.booked {
-  border-left: 4px solid #245f9f;
-  background: #f2f7fc;
-}
-
-.slot.partner {
-  border-left: 4px solid #c77d16;
-  background: #fff9ef;
-}
-
-.slot.unavailable {
-  border-left: 4px solid #9da5ad;
-  background: #f0f2f4;
-}
-
-.slot-time {
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.slot-name {
-  font-size: 10px;
-  color: #6b7785;
-  margin-top: 3px;
-}
-
-.slot-client {
-  font-size: 10px;
-  margin-top: 5px;
-}
-
-.slot-actions {
-  display: flex;
-  gap: 5px;
-  flex-wrap: wrap;
-  margin-top: 7px;
-}
-
-.slot-actions button {
-  padding: 5px 7px;
-  border-radius: 7px;
-  border: 0;
-  font-size: 10px;
-  font-weight: 700;
-}
-
-/* PANNEAUX */
-
-.sections {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-  margin-top: 20px;
-}
-
-.panel {
-  border: 1px solid #dfe5eb;
-  border-radius: 14px;
-  padding: 18px;
-  background: white;
-}
-
-.panel h3 {
-  margin: 0 0 5px;
-}
-
-.panel-subtitle {
-  color: #6b7785;
-  font-size: 12px;
-  margin-bottom: 16px;
-}
-
-.form-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 13px;
-}
-
-.full {
-  grid-column: 1 / -1;
-}
-
-.actions {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 16px;
-}
-
-/* RESERVATIONS */
-
-.booking-row {
-  border: 1px solid #e0e5ea;
-  border-radius: 10px;
-  padding: 12px;
-  margin-top: 8px;
-  background: white;
-}
-
-.booking-main {
-  display: flex;
-  justify-content: space-between;
-  gap: 15px;
-  align-items: flex-start;
-}
-
-.booking-name {
-  font-weight: 700;
-}
-
-.booking-meta {
-  margin-top: 4px;
-  color: #6b7785;
-  font-size: 11px;
-}
-
-.badge {
-  display: inline-block;
-  padding: 4px 7px;
-  border-radius: 999px;
-  font-size: 10px;
-  font-weight: 700;
-  background: #eef2f5;
-  color: #5d6873;
-}
-
-.badge.partner {
-  background: #fff0d8;
-  color: #8a590d;
-}
-
-.badge.site {
-  background: #e8f2fc;
-  color: #245f9f;
-}
-
-/* MODAL */
-
-.modal-bg {
-  position: fixed;
-  inset: 0;
-  background: rgba(10, 22, 34, 0.55);
-  display: none;
-  align-items: center;
-  justify-content: center;
-  padding: 15px;
-  z-index: 1000;
-}
-
-.modal-bg.show {
-  display: flex;
-}
-
-.modal {
-  width: 100%;
-  max-width: 620px;
-  background: white;
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 20px 60px rgba(0,0,0,.22);
-  max-height: 92vh;
-  overflow-y: auto;
-}
-
-.modal-header {
-  background: #102943;
-  color: white;
-  padding: 20px;
-}
-
-.modal-header h3 {
-  margin: 0;
-  font-size: 19px;
-}
-
-.modal-header p {
-  margin: 6px 0 0;
-  opacity: .75;
-  font-size: 12px;
-}
-
-.modal-body {
-  padding: 20px;
-}
-
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  padding: 0 20px 20px;
-}
-
-@media(max-width:900px) {
-  .sections {
-    grid-template-columns: 1fr;
-  }
-}
-
-@media(max-width:700px) {
-  .calendar {
-    gap: 4px;
-  }
-
-  .day {
-    min-height: 105px;
-    padding: 5px;
-  }
-
-  .form-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .full {
-    grid-column: auto;
-  }
-
-  .slot-actions button {
-    width: 100%;
-  }
-}
-</style>
-</head>
-
-<body>
-
-<!-- =====================================================
-     CONNEXION
-     ===================================================== -->
-
-<div id="loginScreen" class="login">
-
-  <div class="card">
-
-    <div class="header">
-      <h1>PexPlanner</h1>
-      <p>Administration PilotExperience</p>
-    </div>
-
-    <div class="content">
-
-      <div id="loginMessage" class="message"></div>
-
-      <label for="password">
-        Mot de passe administrateur
-      </label>
-
-      <input
-        id="password"
-        type="password"
-        placeholder="Votre mot de passe"
-        onkeydown="if(event.key==='Enter') login()"
-      >
-
-      <div class="actions">
-
-        <button
-          class="btn primary"
-          style="width:100%"
-          onclick="login()"
-        >
-          Accéder au planning
-        </button>
-
-      </div>
-
-    </div>
-
-  </div>
-
-</div>
-
-
-<!-- =====================================================
-     ADMIN
-     ===================================================== -->
-
-<div id="adminScreen" class="hidden">
-
-  <div class="container">
-
-    <div class="card">
-
-      <div class="header">
-
-        <h1>PexPlanner — Administration</h1>
-
-        <p>
-          Gestion du planning PilotExperience
-        </p>
-
-      </div>
-
-      <div class="content">
-
-        <div
-          id="adminMessage"
-          class="message"
-        ></div>
-
-
-        <div class="topbar">
-
-          <div>
-
-            <h2>
-              Planning
-            </h2>
-
-            <div class="subtitle">
-              Gestion des créneaux et réservations
-            </div>
-
-          </div>
-
-
-          <button
-            class="btn secondary"
-            onclick="logout()"
-          >
-            Déconnexion
-          </button>
-
-        </div>
-
-
-        <!-- FILTRES -->
-
-        <div class="controls">
-
-          <div class="control-field">
-
-            <label>
-              Séance
-            </label>
-
-            <select id="filterSession">
-              <option value="all">
-                Toutes les séances
-              </option>
-            </select>
-
-          </div>
-
-
-          <div class="control-field">
-
-            <label>
-              Mois
-            </label>
-
-            <input
-              id="filterMonth"
-              type="month"
-            >
-
-          </div>
-
-
-          <button
-            class="btn primary"
-            onclick="openCreateModal()"
-          >
-            + Ajouter un créneau
-          </button>
-
-
-          <button
-            class="btn secondary"
-            onclick="openSpecialHoursModal()"
-          >
-            + Ouverture exceptionnelle
-          </button>
-
-
-          <button
-            class="btn secondary"
-            onclick="openBlockedModal()"
-          >
-            + Blocage
-          </button>
-
-        </div>
-
-
-        <!-- CALENDRIER -->
-
-        <div class="calendar-header">
-
-          <h3 id="calendarTitle"></h3>
-
-          <div class="calendar-nav">
-
-            <button onclick="changeMonth(-1)">
-              ‹
-            </button>
-
-            <button onclick="changeMonth(1)">
-              ›
-            </button>
-
-          </div>
-
-        </div>
-
-
-        <div
-          id="calendar"
-          class="calendar"
-        ></div>
-
-
-        <!-- PANNEAUX -->
-
-        <div class="sections">
-
-          <div class="panel">
-
-            <h3>
-              Horaires habituels
-            </h3>
-
-            <div class="panel-subtitle">
-              Horaires généraux de PilotExperience
-            </div>
-
-            <p>
-              <strong>Lundi → Vendredi</strong><br>
-              17h00 → 19h00
-            </p>
-
-            <p>
-              <strong>Samedi → Dimanche</strong><br>
-              09h00 → 19h00
-            </p>
-
-          </div>
-
-
-          <div class="panel">
-
-            <h3>
-              Légende
-            </h3>
-
-            <div class="panel-subtitle">
-              État des créneaux
-            </div>
-
-            <p>🟢 Disponible</p>
-            <p>🔵 Réservé sur le site</p>
-            <p>🟠 Partenaire</p>
-            <p>⚪ Bloqué</p>
-
-          </div>
-
-        </div>
-
-
-        <!-- RESERVATIONS -->
-
-        <div
-          class="panel"
-          style="margin-top:20px"
-        >
-
-          <h3>
-            Réservations
-          </h3>
-
-          <div class="panel-subtitle">
-            Réservations clients et partenaires
-          </div>
-
-          <div id="bookings">
-            Chargement...
-          </div>
-
-        </div>
-
-
-        <!-- EXCEPTIONS -->
-
-        <div class="sections">
-
-          <div class="panel">
-
-            <h3>
-              Ouvertures exceptionnelles
-            </h3>
-
-            <div
-              id="specialHoursList"
-            >
-              Chargement...
-            </div>
-
-          </div>
-
-
-          <div class="panel">
-
-            <h3>
-              Blocages
-            </h3>
-
-            <div
-              id="blockedList"
-            >
-              Chargement...
-            </div>
-
-          </div>
-
-        </div>
-
-      </div>
-
-    </div>
-
-  </div>
-
-</div>
-
-
-<!-- =====================================================
-     MODAL CRENEAU
-     ===================================================== -->
-
-<div
-  id="createModal"
-  class="modal-bg"
->
-
-  <div class="modal">
-
-    <div class="modal-header">
-
-      <h3>
-        Ajouter un créneau
-      </h3>
-
-      <p>
-        Créer une nouvelle disponibilité
-      </p>
-
-    </div>
-
-    <div class="modal-body">
-
-      <div
-        id="createMessage"
-        class="message"
-      ></div>
-
-      <div class="form-grid">
-
-        <div>
-
-          <label>
-            Date *
-          </label>
-
-          <input
-            id="createDate"
-            type="date"
-          >
-
-        </div>
-
-
-        <div>
-
-          <label>
-            Heure *
-          </label>
-
-          <input
-            id="createTime"
-            type="time"
-          >
-
-        </div>
-
-
-        <div class="full">
-
-          <label>
-            Séance *
-          </label>
-
-          <select id="createSession"></select>
-
-        </div>
-
-      </div>
-
-    </div>
-
-    <div class="modal-footer">
-
-      <button
-        class="btn secondary"
-        onclick="closeCreateModal()"
-      >
-        Annuler
-      </button>
-
-      <button
-        class="btn primary"
-        onclick="submitCreateSlot()"
-      >
-        Créer le créneau
-      </button>
-
-    </div>
-
-  </div>
-
-</div>
-
-
-<!-- =====================================================
-     MODAL PARTENAIRE
-     ===================================================== -->
-
-<div
-  id="partnerModal"
-  class="modal-bg"
->
-
-  <div class="modal">
-
-    <div class="modal-header">
-
-      <h3>
-        Réservation partenaire
-      </h3>
-
-      <p id="partnerSlotInfo"></p>
-
-    </div>
-
-    <div class="modal-body">
-
-      <div
-        id="partnerMessage"
-        class="message"
-      ></div>
-
-      <div class="form-grid">
-
-        <div class="full">
-
-          <label>
-            Plateforme partenaire *
-          </label>
-
-          <input
-            id="partnerName"
-            placeholder="Ex. Wonderbox"
-          >
-
-        </div>
-
-
-        <div>
-
-          <label>
-            Numéro de billet *
-          </label>
-
-          <input
-            id="partnerTicket"
-          >
-
-        </div>
-
-
-        <div>
-
-          <label>
-            Participants
-          </label>
-
-          <select id="partnerParticipants">
-
-            <option value="1">1</option>
-            <option value="2">2</option>
-            <option value="3">3</option>
-            <option value="4">4</option>
-
-          </select>
-
-        </div>
-
-
-        <div>
-
-          <label>
-            Prénom *
-          </label>
-
-          <input
-            id="partnerFirstName"
-          >
-
-        </div>
-
-
-        <div>
-
-          <label>
-            Nom *
-          </label>
-
-          <input
-            id="partnerLastName"
-          >
-
-        </div>
-
-
-        <div>
-
-          <label>
-            E-mail
-          </label>
-
-          <input
-            id="partnerEmail"
-            type="email"
-          >
-
-        </div>
-
-
-        <div>
-
-          <label>
-            Téléphone
-          </label>
-
-          <input
-            id="partnerPhone"
-            type="tel"
-          >
-
-        </div>
-
-
-        <div class="full">
-
-          <label>
-            Commentaire
-          </label>
-
-          <textarea
-            id="partnerComment"
-            rows="3"
-          ></textarea>
-
-        </div>
-
-      </div>
-
-    </div>
-
-    <div class="modal-footer">
-
-      <button
-        class="btn secondary"
-        onclick="closePartnerModal()"
-      >
-        Annuler
-      </button>
-
-      <button
-        id="partnerSubmit"
-        class="btn primary"
-        onclick="submitPartnerBooking()"
-      >
-        Enregistrer
-      </button>
-
-    </div>
-
-  </div>
-
-</div>
-
-
-<!-- =====================================================
-     MODAL OUVERTURE EXCEPTIONNELLE
-     ===================================================== -->
-
-<div
-  id="specialModal"
-  class="modal-bg"
->
-
-  <div class="modal">
-
-    <div class="modal-header">
-
-      <h3>
-        Ouverture exceptionnelle
-      </h3>
-
-      <p>
-        Ouvrir une plage en dehors des horaires habituels
-      </p>
-
-    </div>
-
-    <div class="modal-body">
-
-      <div
-        id="specialMessage"
-        class="message"
-      ></div>
-
-      <div class="form-grid">
-
-        <div>
-
-          <label>
-            Date *
-          </label>
-
-          <input
-            id="specialDate"
-            type="date"
-          >
-
-        </div>
-
-
-        <div></div>
-
-
-        <div>
-
-          <label>
-            De *
-          </label>
-
-          <input
-            id="specialStart"
-            type="time"
-          >
-
-        </div>
-
-
-        <div>
-
-          <label>
-            À *
-          </label>
-
-          <input
-            id="specialEnd"
-            type="time"
-          >
-
-        </div>
-
-
-        <div class="full">
-
-          <label>
-            Note
-          </label>
-
-          <input
-            id="specialNote"
-            placeholder="Ex. ouverture exceptionnelle"
-          >
-
-        </div>
-
-      </div>
-
-    </div>
-
-    <div class="modal-footer">
-
-      <button
-        class="btn secondary"
-        onclick="closeSpecialModal()"
-      >
-        Annuler
-      </button>
-
-      <button
-        class="btn primary"
-        onclick="submitSpecialHours()"
-      >
-        Enregistrer
-      </button>
-
-    </div>
-
-  </div>
-
-</div>
-
-
-<!-- =====================================================
-     MODAL BLOCAGE
-     ===================================================== -->
-
-<div
-  id="blockedModal"
-  class="modal-bg"
->
-
-  <div class="modal">
-
-    <div class="modal-header">
-
-      <h3>
-        Bloquer une période
-      </h3>
-
-      <p>
-        Cette période ne sera pas proposée aux clients
-      </p>
-
-    </div>
-
-    <div class="modal-body">
-
-      <div
-        id="blockedMessage"
-        class="message"
-      ></div>
-
-      <div class="form-grid">
-
-        <div>
-
-          <label>
-            Date *
-          </label>
-
-          <input
-            id="blockedDate"
-            type="date"
-          >
-
-        </div>
-
-        <div></div>
-
-        <div>
-
-          <label>
-            De *
-          </label>
-
-          <input
-            id="blockedStart"
-            type="time"
-          >
-
-        </div>
-
-        <div>
-
-          <label>
-            À *
-          </label>
-
-          <input
-            id="blockedEnd"
-            type="time"
-          >
-
-        </div>
-
-        <div class="full">
-
-          <label>
-            Motif
-          </label>
-
-          <input
-            id="blockedReason"
-            placeholder="Ex. événement privé"
-          >
-
-        </div>
-
-      </div>
-
-    </div>
-
-    <div class="modal-footer">
-
-      <button
-        class="btn secondary"
-        onclick="closeBlockedModal()"
-      >
-        Annuler
-      </button>
-
-      <button
-        class="btn primary"
-        onclick="submitBlockedPeriod()"
-      >
-        Bloquer
-      </button>
-
-    </div>
-
-  </div>
-
-</div>
-
-
-<script>
-
-const API = "/api";
-
-let password = "";
-let sessions = [];
-let slots = [];
-let bookings = [];
-let selectedPartnerSlot = null;
-
-
-/* =====================================================
-   OUTILS
-   ===================================================== */
-
-function pad(number) {
-
-  return String(number)
-    .padStart(2, "0");
-
-}
-
-
-function formatDate(date) {
-
-  return new Date(
-    date + "T12:00:00"
-  ).toLocaleDateString(
-    "fr-FR",
-    {
-      weekday: "long",
-      day: "numeric",
-      month: "long",
-      year: "numeric"
-    }
-  );
-
-}
-
-
-function showMessage(
-  id,
-  text,
-  type
-) {
-
-  const element =
-    document.getElementById(id);
-
-  element.textContent =
-    text;
-
-  element.className =
-    "message show " + type;
-
-}
-
-
-function hideMessage(id) {
-
-  const element =
-    document.getElementById(id);
-
-  element.className =
-    "message";
-
-  element.textContent =
-    "";
-
-}
-
-
-/* =====================================================
-   LOGIN
-   ===================================================== */
-
-async function login() {
-
-  password =
-    document.getElementById(
-      "password"
-    ).value.trim();
-
-
-  if (!password) {
-
-    showMessage(
-      "loginMessage",
-      "Entrez votre mot de passe.",
-      "error"
-    );
-
-    return;
-
-  }
-
-
-  try {
-
-    await adminRequest({
-      action: "login"
+  if (req.method !== "POST") {
+    return res.status(405).json({
+      error: "Method not allowed"
     });
-
-
-    document
-      .getElementById(
-        "loginScreen"
-      )
-      .classList.add("hidden");
-
-
-    document
-      .getElementById(
-        "adminScreen"
-      )
-      .classList.remove("hidden");
-
-
-    await loadAdmin();
-
-
-  } catch (error) {
-
-    showMessage(
-      "loginMessage",
-      error.message,
-      "error"
-    );
-
   }
-
-}
-
-
-function logout() {
-
-  password = "";
-
-  document
-    .getElementById(
-      "adminScreen"
-    )
-    .classList.add("hidden");
-
-
-  document
-    .getElementById(
-      "loginScreen"
-    )
-    .classList.remove("hidden");
-
-
-  document.getElementById(
-    "password"
-  ).value = "";
-
-}
-
-
-/* =====================================================
-   API
-   ===================================================== */
-
-async function adminRequest(data) {
-
-  const response =
-    await fetch(
-      API + "/admin",
-      {
-        method: "POST",
-
-        headers: {
-          "Content-Type":
-            "application/json"
-        },
-
-        body:
-          JSON.stringify({
-            ...data,
-            password:
-              password
-          })
-      }
-    );
-
-
-  const result =
-    await response.json();
-
-
-  if (!response.ok) {
-
-    throw new Error(
-      result.error ||
-      "Erreur serveur"
-    );
-
-  }
-
-
-  return result;
-
-}
-
-
-/* =====================================================
-   CHARGEMENT
-   ===================================================== */
-
-async function loadAdmin() {
 
   try {
 
-    const result =
-      await adminRequest({
-        action: "data"
+    const {
+      password,
+      action
+    } = req.body || {};
+
+    /* =====================================================
+       SECURITE
+       ===================================================== */
+
+    if (
+      !password ||
+      password !== process.env.ADMIN_PASSWORD
+    ) {
+      return res.status(401).json({
+        error: "Mot de passe incorrect"
+      });
+    }
+
+
+    /* =====================================================
+       LOGIN
+       ===================================================== */
+
+    if (action === "login") {
+
+      return res.status(200).json({
+        success: true
       });
 
-
-    sessions =
-      result.sessions || [];
-
-    slots =
-      result.slots || [];
-
-    bookings =
-      result.bookings || [];
+    }
 
 
-    populateSessions();
+    /* =====================================================
+       DONNEES ADMIN
+       ===================================================== */
 
-    renderCalendar();
+    if (action === "data") {
 
-    renderBookings();
+      const {
+        data: sessions,
+        error: sessionsError
+      } = await supabase
+        .from("sessions")
+        .select("*")
+        .eq("active", true)
+        .order("duration")
+        .order("name");
 
-    renderSpecialHours(
-      result.specialHours || []
-    );
-
-    renderBlocked(
-      result.blockedPeriods || []
-    );
-
-
-  } catch (error) {
-
-    showMessage(
-      "adminMessage",
-      error.message,
-      "error"
-    );
-
-  }
-
-}
-
-
-/* =====================================================
-   SELECTIONS
-   ===================================================== */
-
-function populateSessions() {
-
-  const filter =
-    document.getElementById(
-      "filterSession"
-    );
-
-  const create =
-    document.getElementById(
-      "createSession"
-    );
-
-
-  filter.innerHTML =
-    `<option value="all">
-      Toutes les séances
-     </option>`;
-
-
-  create.innerHTML =
-    "";
-
-
-  sessions.forEach(session => {
-
-    const option1 =
-      document.createElement(
-        "option"
-      );
-
-    option1.value =
-      session.id;
-
-    option1.textContent =
-      `${session.name} — ${session.duration} min`;
-
-
-    filter.appendChild(
-      option1
-    );
-
-
-    const option2 =
-      document.createElement(
-        "option"
-      );
-
-    option2.value =
-      session.id;
-
-    option2.textContent =
-      `${session.name} — ${session.duration} min`;
-
-
-    create.appendChild(
-      option2
-    );
-
-  });
-
-}
-
-
-/* =====================================================
-   CALENDRIER
-   ===================================================== */
-
-function renderCalendar() {
-
-  const month =
-    document.getElementById(
-      "filterMonth"
-    ).value;
-
-
-  if (!month) {
-    return;
-  }
-
-
-  const [
-    year,
-    monthNumber
-  ] =
-    month
-      .split("-")
-      .map(Number);
-
-
-  const first =
-    new Date(
-      year,
-      monthNumber - 1,
-      1
-    );
-
-
-  const totalDays =
-    new Date(
-      year,
-      monthNumber,
-      0
-    ).getDate();
-
-
-  const offset =
-    (first.getDay() + 6) % 7;
-
-
-  document.getElementById(
-    "calendarTitle"
-  ).textContent =
-    first.toLocaleDateString(
-      "fr-FR",
-      {
-        month: "long",
-        year: "numeric"
+      if (sessionsError) {
+        throw sessionsError;
       }
-    );
 
 
-  const calendar =
-    document.getElementById(
-      "calendar"
-    );
+      const {
+        data: slots,
+        error: slotsError
+      } = await supabase
+        .from("slots")
+        .select(`
+          id,
+          date,
+          time,
+          status,
+          source,
+          note,
+          session_id,
+          sessions (
+            id,
+            name,
+            duration
+          )
+        `)
+        .order("date")
+        .order("time");
+
+      if (slotsError) {
+        throw slotsError;
+      }
 
 
-  calendar.innerHTML = "";
+      const {
+        data: bookings,
+        error: bookingsError
+      } = await supabase
+        .from("bookings")
+        .select(`
+          id,
+          slot_id,
+          first_name,
+          last_name,
+          email,
+          phone,
+          ticket,
+          participants,
+          comment,
+          source,
+          partner_name,
+          created_at
+        `)
+        .order("created_at", {
+          ascending: false
+        });
+
+      if (bookingsError) {
+        throw bookingsError;
+      }
 
 
-  [
-    "Lun",
-    "Mar",
-    "Mer",
-    "Jeu",
-    "Ven",
-    "Sam",
-    "Dim"
-  ].forEach(day => {
+      const {
+        data: openingHours,
+        error: openingError
+      } = await supabase
+        .from("opening_hours")
+        .select("*")
+        .order("day_of_week");
 
-    const element =
-      document.createElement(
-        "div"
-      );
-
-    element.className =
-      "weekday";
-
-    element.textContent =
-      day;
-
-    calendar.appendChild(
-      element
-    );
-
-  });
+      if (openingError) {
+        throw openingError;
+      }
 
 
-  for (
-    let i = 0;
-    i < offset;
-    i++
-  ) {
+      const {
+        data: specialHours,
+        error: specialError
+      } = await supabase
+        .from("special_hours")
+        .select("*")
+        .order("date")
+        .order("start_time");
 
-    const empty =
-      document.createElement(
-        "div"
-      );
-
-    empty.className =
-      "day empty";
-
-    calendar.appendChild(
-      empty
-    );
-
-  }
+      if (specialError) {
+        throw specialError;
+      }
 
 
-  const selectedSession =
-    document.getElementById(
-      "filterSession"
-    ).value;
+      const {
+        data: blockedPeriods,
+        error: blockedError
+      } = await supabase
+        .from("blocked_periods")
+        .select("*")
+        .order("date")
+        .order("start_time");
+
+      if (blockedError) {
+        throw blockedError;
+      }
 
 
-  for (
-    let day = 1;
-    day <= totalDays;
-    day++
-  ) {
+      return res.status(200).json({
 
-    const date =
-      year +
-      "-" +
-      pad(monthNumber) +
-      "-" +
-      pad(day);
+        sessions:
+          sessions || [],
 
+        slots:
+          slots || [],
 
-    const dayElement =
-      document.createElement(
-        "div"
-      );
+        bookings:
+          bookings || [],
 
-    dayElement.className =
-      "day";
+        openingHours:
+          openingHours || [],
 
+        specialHours:
+          specialHours || [],
 
-    const number =
-      document.createElement(
-        "div"
-      );
+        blockedPeriods:
+          blockedPeriods || []
 
-    number.className =
-      "day-number";
+      });
 
-    number.textContent =
-      day;
-
-    dayElement.appendChild(
-      number
-    );
+    }
 
 
-    slots
-      .filter(slot => {
+    /* =====================================================
+       MODIFIER HORAIRES HABITUELS
+       ===================================================== */
 
-        if (
-          slot.date !== date
-        ) {
-          return false;
-        }
+    if (
+      action === "updateOpeningHours"
+    ) {
 
-
-        if (
-          selectedSession !== "all" &&
-          slot.session_id !==
-            selectedSession
-        ) {
-          return false;
-        }
+      const {
+        dayOfWeek,
+        isOpen,
+        startTime,
+        endTime
+      } = req.body;
 
 
-        return true;
+      if (
+        dayOfWeek === undefined ||
+        isOpen === undefined
+      ) {
 
-      })
-      .sort((a,b) =>
-        a.time.localeCompare(
-          b.time
+        return res.status(400).json({
+          error:
+            "Jour et statut obligatoires"
+        });
+
+      }
+
+
+      /*
+       Si le jour est ouvert,
+       les horaires sont obligatoires.
+      */
+
+      if (
+        isOpen === true &&
+        (
+          !startTime ||
+          !endTime
         )
-      )
-      .forEach(slot => {
+      ) {
 
-        dayElement.appendChild(
-          createSlotElement(slot)
+        return res.status(400).json({
+          error:
+            "Les horaires sont obligatoires pour un jour ouvert"
+        });
+
+      }
+
+
+      if (
+        isOpen === true &&
+        startTime >= endTime
+      ) {
+
+        return res.status(400).json({
+          error:
+            "L'heure de fin doit être après l'heure de début"
+        });
+
+      }
+
+
+      const {
+        data,
+        error
+      } = await supabase
+        .from("opening_hours")
+        .upsert(
+          {
+            day_of_week:
+              Number(dayOfWeek),
+
+            is_open:
+              Boolean(isOpen),
+
+            start_time:
+              isOpen
+                ? startTime
+                : null,
+
+            end_time:
+              isOpen
+                ? endTime
+                : null
+          },
+          {
+            onConflict:
+              "day_of_week"
+          }
+        )
+        .select()
+        .single();
+
+
+      if (error) {
+        throw error;
+      }
+
+
+      return res.status(200).json({
+
+        success:
+          true,
+
+        openingHours:
+          data
+
+      });
+
+    }
+
+
+    /* =====================================================
+       CREER UN CRENEAU MANUEL
+       ===================================================== */
+
+    if (
+      action === "createSlot"
+    ) {
+
+      const {
+        date,
+        time,
+        sessionId,
+        source,
+        note
+      } = req.body;
+
+
+      if (
+        !date ||
+        !time ||
+        !sessionId
+      ) {
+
+        return res.status(400).json({
+          error:
+            "Date, heure et séance obligatoires"
+        });
+
+      }
+
+
+      const {
+        data: existing
+      } = await supabase
+        .from("slots")
+        .select("id")
+        .eq("date", date)
+        .eq("time", time)
+        .eq(
+          "session_id",
+          sessionId
+        )
+        .limit(1);
+
+
+      if (
+        existing &&
+        existing.length > 0
+      ) {
+
+        return res.status(409).json({
+          error:
+            "Ce créneau existe déjà"
+        });
+
+      }
+
+
+      const {
+        data: slot,
+        error
+      } = await supabase
+        .from("slots")
+        .insert({
+
+          date,
+
+          time,
+
+          session_id:
+            sessionId,
+
+          status:
+            source === "partner"
+              ? "unavailable"
+              : "available",
+
+          source:
+            source ||
+            "pilotexperience",
+
+          note:
+            note ||
+            null
+
+        })
+        .select()
+        .single();
+
+
+      if (error) {
+        throw error;
+      }
+
+
+      return res.status(201).json({
+        success: true,
+        slot
+      });
+
+    }
+
+
+    /* =====================================================
+       MODIFIER CRENEAU
+       ===================================================== */
+
+    if (
+      action === "changeSlot"
+    ) {
+
+      const {
+        slotId,
+        status
+      } = req.body;
+
+
+      if (
+        !slotId ||
+        !status
+      ) {
+
+        return res.status(400).json({
+          error:
+            "Informations manquantes"
+        });
+
+      }
+
+
+      if (
+        status !== "available" &&
+        status !== "unavailable"
+      ) {
+
+        return res.status(400).json({
+          error:
+            "Statut invalide"
+        });
+
+      }
+
+
+      if (
+        status === "available"
+      ) {
+
+        const {
+          data: existingBookings
+        } = await supabase
+          .from("bookings")
+          .select("id")
+          .eq(
+            "slot_id",
+            slotId
+          )
+          .limit(1);
+
+
+        if (
+          existingBookings &&
+          existingBookings.length > 0
+        ) {
+
+          return res.status(409).json({
+            error:
+              "Ce créneau possède déjà une réservation."
+          });
+
+        }
+
+      }
+
+
+      const {
+        data: slot,
+        error
+      } = await supabase
+        .from("slots")
+        .update({
+          status
+        })
+        .eq(
+          "id",
+          slotId
+        )
+        .select()
+        .single();
+
+
+      if (error) {
+        throw error;
+      }
+
+
+      return res.status(200).json({
+
+        success:
+          true,
+
+        slot
+
+      });
+
+    }
+
+
+    /* =====================================================
+       RESERVATION PARTENAIRE
+       ===================================================== */
+
+    if (
+      action === "partnerBooking"
+    ) {
+
+      const {
+        slotId,
+        firstName,
+        lastName,
+        email,
+        phone,
+        ticket,
+        participants,
+        comment,
+        partner
+      } = req.body;
+
+
+      if (
+        !slotId ||
+        !firstName ||
+        !lastName ||
+        !ticket ||
+        !partner
+      ) {
+
+        return res.status(400).json({
+          error:
+            "Créneau, partenaire, prénom, nom et billet obligatoires"
+        });
+
+      }
+
+
+      const {
+        data: slot,
+        error: slotError
+      } = await supabase
+        .from("slots")
+        .select(`
+          id,
+          status,
+          date,
+          time,
+          session_id
+        `)
+        .eq(
+          "id",
+          slotId
+        )
+        .single();
+
+
+      if (
+        slotError ||
+        !slot
+      ) {
+
+        return res.status(404).json({
+          error:
+            "Créneau introuvable"
+        });
+
+      }
+
+
+      if (
+        slot.status !==
+        "available"
+      ) {
+
+        return res.status(409).json({
+          error:
+            "Ce créneau n'est plus disponible"
+        });
+
+      }
+
+
+      const {
+        data: existingBooking
+      } = await supabase
+        .from("bookings")
+        .select("id")
+        .eq(
+          "slot_id",
+          slotId
+        )
+        .limit(1);
+
+
+      if (
+        existingBooking &&
+        existingBooking.length > 0
+      ) {
+
+        return res.status(409).json({
+          error:
+            "Ce créneau possède déjà une réservation"
+        });
+
+      }
+
+
+      const {
+        data: booking,
+        error: bookingError
+      } = await supabase
+        .from("bookings")
+        .insert({
+
+          slot_id:
+            slotId,
+
+          first_name:
+            firstName,
+
+          last_name:
+            lastName,
+
+          email:
+            email ||
+            null,
+
+          phone:
+            phone ||
+            null,
+
+          ticket:
+            ticket,
+
+          participants:
+            Number(
+              participants
+            ) || 1,
+
+          comment:
+            comment ||
+            null,
+
+          source:
+            "partner",
+
+          partner_name:
+            partner
+
+        })
+        .select()
+        .single();
+
+
+      if (bookingError) {
+        throw bookingError;
+      }
+
+
+      const {
+        error: updateError
+      } = await supabase
+        .from("slots")
+        .update({
+
+          status:
+            "unavailable",
+
+          source:
+            "partner",
+
+          note:
+            `Partenaire : ${partner}`
+
+        })
+        .eq(
+          "id",
+          slotId
         );
 
+
+      if (updateError) {
+        throw updateError;
+      }
+
+
+      return res.status(201).json({
+
+        success:
+          true,
+
+        booking
+
       });
 
-
-    calendar.appendChild(
-      dayElement
-    );
-
-  }
-
-}
-
-
-function createSlotElement(slot) {
-
-  const box =
-    document.createElement(
-      "div"
-    );
-
-
-  const booking =
-    bookings.find(
-      b =>
-        b.slot_id ===
-        slot.id
-    );
-
-
-  let type =
-    "available";
-
-
-  if (
-    slot.source === "partner"
-  ) {
-
-    type =
-      "partner";
-
-  } else if (booking) {
-
-    type =
-      "booked";
-
-  } else if (
-    slot.status !== "available"
-  ) {
-
-    type =
-      "unavailable";
-
-  }
-
-
-  box.className =
-    "slot " + type;
-
-
-  const session =
-    sessions.find(
-      s =>
-        s.id ===
-        slot.session_id
-    );
-
-
-  let client =
-    "";
-
-
-  if (booking) {
-
-    client =
-      `<div class="slot-client">
-        ${booking.first_name}
-        ${booking.last_name}
-        <br>
-        Billet :
-        ${booking.ticket}
-       </div>`;
-
-  }
-
-
-  let actions =
-    "";
-
-
-  if (
-    slot.status ===
-      "available"
-  ) {
-
-    actions +=
-      `<button
-        class="danger"
-        onclick="openPartnerModal('${slot.id}')"
-      >
-        Partenaire
-      </button>`;
-
-
-    actions +=
-      `<button
-        class="secondary"
-        onclick="blockSlot('${slot.id}')"
-      >
-        Bloquer
-      </button>`;
-
-  }
-
-
-  if (
-    slot.status !==
-      "available" &&
-    !booking
-  ) {
-
-    actions +=
-      `<button
-        class="success"
-        onclick="releaseSlot('${slot.id}')"
-      >
-        Libérer
-      </button>`;
-
-
-    actions +=
-      `<button
-        class="danger"
-        onclick="deleteSlot('${slot.id}')"
-      >
-        Supprimer
-      </button>`;
-
-  }
-
-
-  box.innerHTML = `
-
-    <div class="slot-time">
-      ${slot.time.substring(0,5)}
-    </div>
-
-    <div class="slot-name">
-      ${session?.name || ""}
-    </div>
-
-    ${client}
-
-    ${
-      actions
-      ? `
-        <div class="slot-actions">
-          ${actions}
-        </div>
-      `
-      : ""
     }
 
-  `;
 
+    /* =====================================================
+       LIBERER CRENEAU
+       ===================================================== */
 
-  return box;
+    if (
+      action === "releaseSlot"
+    ) {
 
-}
+      const {
+        slotId
+      } = req.body;
 
 
-/* =====================================================
-   CREER CRENEAU
-   ===================================================== */
+      if (!slotId) {
 
-function openCreateModal() {
+        return res.status(400).json({
+          error:
+            "Identifiant manquant"
+        });
 
-  hideMessage(
-    "createMessage"
-  );
+      }
 
-  document
-    .getElementById(
-      "createModal"
-    )
-    .classList.add(
-      "show"
-    );
 
-}
+      const {
+        data: existingBookings
+      } = await supabase
+        .from("bookings")
+        .select("id")
+        .eq(
+          "slot_id",
+          slotId
+        )
+        .limit(1);
 
 
-function closeCreateModal() {
+      if (
+        existingBookings &&
+        existingBookings.length > 0
+      ) {
 
-  document
-    .getElementById(
-      "createModal"
-    )
-    .classList.remove(
-      "show"
-    );
+        return res.status(409).json({
+          error:
+            "Ce créneau possède une réservation."
+        });
 
-}
+      }
 
 
-async function submitCreateSlot() {
+      const {
+        error
+      } = await supabase
+        .from("slots")
+        .update({
 
-  const date =
-    document.getElementById(
-      "createDate"
-    ).value;
+          status:
+            "available",
 
+          source:
+            "pilotexperience",
 
-  const time =
-    document.getElementById(
-      "createTime"
-    ).value;
+          note:
+            null
 
+        })
+        .eq(
+          "id",
+          slotId
+        );
 
-  const sessionId =
-    document.getElementById(
-      "createSession"
-    ).value;
 
+      if (error) {
+        throw error;
+      }
 
-  if (
-    !date ||
-    !time ||
-    !sessionId
-  ) {
 
-    showMessage(
-      "createMessage",
-      "Complétez tous les champs.",
-      "error"
-    );
+      return res.status(200).json({
+        success: true
+      });
 
-    return;
+    }
 
-  }
 
+    /* =====================================================
+       SUPPRIMER CRENEAU
+       ===================================================== */
 
-  try {
+    if (
+      action === "deleteSlot"
+    ) {
 
-    await adminRequest({
+      const {
+        slotId
+      } = req.body;
 
-      action:
-        "createSlot",
 
-      date,
+      if (!slotId) {
 
-      time,
+        return res.status(400).json({
+          error:
+            "Identifiant manquant"
+        });
 
-      sessionId,
+      }
 
-      source:
-        "pilotexperience"
 
-    });
+      const {
+        data: existingBookings
+      } = await supabase
+        .from("bookings")
+        .select("id")
+        .eq(
+          "slot_id",
+          slotId
+        )
+        .limit(1);
 
 
-    closeCreateModal();
+      if (
+        existingBookings &&
+        existingBookings.length > 0
+      ) {
 
+        return res.status(409).json({
+          error:
+            "Impossible : ce créneau possède une réservation."
+        });
 
-    showMessage(
-      "adminMessage",
-      "Créneau créé.",
-      "success"
-    );
+      }
 
 
-    await loadAdmin();
+      const {
+        error
+      } = await supabase
+        .from("slots")
+        .delete()
+        .eq(
+          "id",
+          slotId
+        );
 
 
-  } catch (error) {
+      if (error) {
+        throw error;
+      }
 
-    showMessage(
-      "createMessage",
-      error.message,
-      "error"
-    );
 
-  }
+      return res.status(200).json({
+        success: true
+      });
 
-}
+    }
 
 
-/* =====================================================
-   PARTENAIRE
-   ===================================================== */
+    /* =====================================================
+       OUVERTURE EXCEPTIONNELLE
+       ===================================================== */
 
-function openPartnerModal(id) {
+    if (
+      action === "createSpecialHours"
+    ) {
 
-  selectedPartnerSlot =
-    slots.find(
-      slot =>
-        slot.id === id
-    );
+      const {
+        date,
+        startTime,
+        endTime,
+        note
+      } = req.body;
 
 
-  if (!selectedPartnerSlot) {
-    return;
-  }
+      if (
+        !date ||
+        !startTime ||
+        !endTime
+      ) {
 
+        return res.status(400).json({
+          error:
+            "Date et horaires obligatoires"
+        });
 
-  const session =
-    sessions.find(
-      s =>
-        s.id ===
-        selectedPartnerSlot.session_id
-    );
+      }
 
 
-  document.getElementById(
-    "partnerSlotInfo"
-  ).textContent =
-    `${formatDate(
-      selectedPartnerSlot.date
-    )} — ${
-      selectedPartnerSlot.time.substring(0,5)
-    } — ${
-      session?.name || ""
-    }`;
+      if (
+        startTime >= endTime
+      ) {
 
+        return res.status(400).json({
+          error:
+            "L'heure de fin doit être après l'heure de début"
+        });
 
-  [
-    "partnerName",
-    "partnerTicket",
-    "partnerFirstName",
-    "partnerLastName",
-    "partnerEmail",
-    "partnerPhone",
-    "partnerComment"
-  ].forEach(id => {
+      }
 
-    document.getElementById(
-      id
-    ).value = "";
 
-  });
+      const {
+        data,
+        error
+      } = await supabase
+        .from("special_hours")
+        .insert({
 
+          date,
 
-  document.getElementById(
-    "partnerParticipants"
-  ).value = "1";
+          is_open:
+            true,
 
+          start_time:
+            startTime,
 
-  hideMessage(
-    "partnerMessage"
-  );
+          end_time:
+            endTime,
 
+          note:
+            note ||
+            null
 
-  document
-    .getElementById(
-      "partnerModal"
-    )
-    .classList.add(
-      "show"
-    );
+        })
+        .select()
+        .single();
 
-}
 
+      if (error) {
+        throw error;
+      }
 
-function closePartnerModal() {
 
-  document
-    .getElementById(
-      "partnerModal"
-    )
-    .classList.remove(
-      "show"
-    );
+      return res.status(201).json({
 
-  selectedPartnerSlot =
-    null;
+        success:
+          true,
 
-}
+        specialHours:
+          data
 
+      });
 
-async function submitPartnerBooking() {
+    }
 
-  if (!selectedPartnerSlot) {
-    return;
-  }
 
+    /* =====================================================
+       SUPPRIMER OUVERTURE EXCEPTIONNELLE
+       ===================================================== */
 
-  const partner =
-    document.getElementById(
-      "partnerName"
-    ).value.trim();
+    if (
+      action ===
+      "deleteSpecialHours"
+    ) {
 
-
-  const ticket =
-    document.getElementById(
-      "partnerTicket"
-    ).value.trim();
-
-
-  const firstName =
-    document.getElementById(
-      "partnerFirstName"
-    ).value.trim();
-
-
-  const lastName =
-    document.getElementById(
-      "partnerLastName"
-    ).value.trim();
-
-
-  const email =
-    document.getElementById(
-      "partnerEmail"
-    ).value.trim();
-
-
-  const phone =
-    document.getElementById(
-      "partnerPhone"
-    ).value.trim();
-
-
-  const participants =
-    Number(
-      document.getElementById(
-        "partnerParticipants"
-      ).value
-    );
-
-
-  const comment =
-    document.getElementById(
-      "partnerComment"
-    ).value.trim();
-
-
-  if (
-    !partner ||
-    !ticket ||
-    !firstName ||
-    !lastName
-  ) {
-
-    showMessage(
-      "partnerMessage",
-      "Partenaire, billet, prénom et nom sont obligatoires.",
-      "error"
-    );
-
-    return;
-
-  }
-
-
-  const button =
-    document.getElementById(
-      "partnerSubmit"
-    );
-
-
-  button.disabled =
-    true;
-
-
-  try {
-
-    await adminRequest({
-
-      action:
-        "partnerBooking",
-
-      slotId:
-        selectedPartnerSlot.id,
-
-      partner,
-
-      ticket,
-
-      firstName,
-
-      lastName,
-
-      email,
-
-      phone,
-
-      participants,
-
-      comment
-
-    });
-
-
-    closePartnerModal();
-
-
-    showMessage(
-      "adminMessage",
-      "Réservation partenaire enregistrée.",
-      "success"
-    );
-
-
-    await loadAdmin();
-
-
-  } catch (error) {
-
-    showMessage(
-      "partnerMessage",
-      error.message,
-      "error"
-    );
-
-  } finally {
-
-    button.disabled =
-      false;
-
-  }
-
-}
-
-
-/* =====================================================
-   BLOQUER
-   ===================================================== */
-
-async function blockSlot(id) {
-
-  try {
-
-    await adminRequest({
-
-      action:
-        "changeSlot",
-
-      slotId:
-        id,
-
-      status:
-        "unavailable"
-
-    });
-
-
-    await loadAdmin();
-
-
-  } catch (error) {
-
-    showMessage(
-      "adminMessage",
-      error.message,
-      "error"
-    );
-
-  }
-
-}
-
-
-/* =====================================================
-   LIBERER
-   ===================================================== */
-
-async function releaseSlot(id) {
-
-  if (
-    !confirm(
-      "Remettre ce créneau disponible ?"
-    )
-  ) {
-    return;
-  }
-
-
-  try {
-
-    await adminRequest({
-
-      action:
-        "releaseSlot",
-
-      slotId:
+      const {
         id
-
-    });
-
-
-    await loadAdmin();
+      } = req.body;
 
 
-  } catch (error) {
+      if (!id) {
 
-    showMessage(
-      "adminMessage",
-      error.message,
-      "error"
-    );
+        return res.status(400).json({
+          error:
+            "Identifiant manquant"
+        });
 
-  }
-
-}
+      }
 
 
-/* =====================================================
-   SUPPRIMER
-   ===================================================== */
-
-async function deleteSlot(id) {
-
-  if (
-    !confirm(
-      "Supprimer ce créneau ?"
-    )
-  ) {
-    return;
-  }
+      const {
+        error
+      } = await supabase
+        .from("special_hours")
+        .delete()
+        .eq(
+          "id",
+          id
+        );
 
 
-  try {
+      if (error) {
+        throw error;
+      }
 
-    await adminRequest({
 
-      action:
-        "deleteSlot",
+      return res.status(200).json({
+        success: true
+      });
 
-      slotId:
+    }
+
+
+    /* =====================================================
+       CREER BLOCAGE
+       ===================================================== */
+
+    if (
+      action ===
+      "createBlockedPeriod"
+    ) {
+
+      const {
+        date,
+        startTime,
+        endTime,
+        reason
+      } = req.body;
+
+
+      if (
+        !date ||
+        !startTime ||
+        !endTime
+      ) {
+
+        return res.status(400).json({
+          error:
+            "Date et horaires obligatoires"
+        });
+
+      }
+
+
+      if (
+        startTime >= endTime
+      ) {
+
+        return res.status(400).json({
+          error:
+            "L'heure de fin doit être après l'heure de début"
+        });
+
+      }
+
+
+      const {
+        data,
+        error
+      } = await supabase
+        .from("blocked_periods")
+        .insert({
+
+          date,
+
+          start_time:
+            startTime,
+
+          end_time:
+            endTime,
+
+          reason:
+            reason ||
+            null,
+
+          source:
+            "pilotexperience"
+
+        })
+        .select()
+        .single();
+
+
+      if (error) {
+        throw error;
+      }
+
+
+      return res.status(201).json({
+
+        success:
+          true,
+
+        blockedPeriod:
+          data
+
+      });
+
+    }
+
+
+    /* =====================================================
+       SUPPRIMER BLOCAGE
+       ===================================================== */
+
+    if (
+      action ===
+      "deleteBlockedPeriod"
+    ) {
+
+      const {
         id
+      } = req.body;
 
+
+      if (!id) {
+
+        return res.status(400).json({
+          error:
+            "Identifiant manquant"
+        });
+
+      }
+
+
+      const {
+        error
+      } = await supabase
+        .from("blocked_periods")
+        .delete()
+        .eq(
+          "id",
+          id
+        );
+
+
+      if (error) {
+        throw error;
+      }
+
+
+      return res.status(200).json({
+        success: true
+      });
+
+    }
+
+
+    /* =====================================================
+       ACTION INCONNUE
+       ===================================================== */
+
+    return res.status(400).json({
+      error:
+        "Action inconnue"
     });
-
-
-    await loadAdmin();
 
 
   } catch (error) {
 
-    showMessage(
-      "adminMessage",
-      error.message,
-      "error"
-    );
-
-  }
-
-}
-
-
-/* =====================================================
-   RESERVATIONS
-   ===================================================== */
-
-function renderBookings() {
-
-  const container =
-    document.getElementById(
-      "bookings"
-    );
-
-
-  if (!bookings.length) {
-
-    container.innerHTML =
-      `<div class="subtitle">
-        Aucune réservation.
-       </div>`;
-
-    return;
-
-  }
-
-
-  container.innerHTML =
-    "";
-
-
-  bookings.forEach(booking => {
-
-    const slot =
-      slots.find(
-        s =>
-          s.id ===
-          booking.slot_id
-      );
-
-
-    const session =
-      slot
-        ? sessions.find(
-            s =>
-              s.id ===
-              slot.session_id
-          )
-        : null;
-
-
-    const partner =
-      booking.partner_name ||
-      (
-        booking.source ===
-          "partner"
-          ? "Partenaire"
-          : ""
-      );
-
-
-    const row =
-      document.createElement(
-        "div"
-      );
-
-
-    row.className =
-      "booking-row";
-
-
-    row.innerHTML = `
-
-      <div class="booking-main">
-
-        <div>
-
-          <div class="booking-name">
-            ${booking.first_name}
-            ${booking.last_name}
-          </div>
-
-          <div class="booking-meta">
-            ${
-              session?.name ||
-              ""
-            }
-          </div>
-
-          ${
-            slot
-            ? `
-              <div class="booking-meta">
-                ${formatDate(
-                  slot.date
-                )}
-                à
-                ${slot.time.substring(0,5)}
-              </div>
-            `
-            : ""
-          }
-
-          <div class="booking-meta">
-            Billet :
-            <strong>
-              ${booking.ticket}
-            </strong>
-          </div>
-
-          ${
-            partner
-            ? `
-              <div class="booking-meta">
-                Partenaire :
-                <strong>
-                  ${partner}
-                </strong>
-              </div>
-            `
-            : ""
-          }
-
-          ${
-            booking.email
-            ? `
-              <div class="booking-meta">
-                ${booking.email}
-              </div>
-            `
-            : ""
-          }
-
-          ${
-            booking.phone
-            ? `
-              <div class="booking-meta">
-                ${booking.phone}
-              </div>
-            `
-            : ""
-          }
-
-        </div>
-
-        <span class="badge ${
-          partner
-          ? "partner"
-          : "site"
-        }">
-          ${
-            partner
-              ? "PARTENAIRE"
-              : "SITE"
-          }
-        </span>
-
-      </div>
-
-    `;
-
-
-    container.appendChild(
-      row
-    );
-
-  });
-
-}
-
-
-/* =====================================================
-   OUVERTURE EXCEPTIONNELLE
-   ===================================================== */
-
-function openSpecialHoursModal() {
-
-  hideMessage(
-    "specialMessage"
-  );
-
-  document
-    .getElementById(
-      "specialModal"
-    )
-    .classList.add(
-      "show"
-    );
-
-}
-
-
-function closeSpecialModal() {
-
-  document
-    .getElementById(
-      "specialModal"
-    )
-    .classList.remove(
-      "show"
-    );
-
-}
-
-
-async function submitSpecialHours() {
-
-  const date =
-    document.getElementById(
-      "specialDate"
-    ).value;
-
-
-  const startTime =
-    document.getElementById(
-      "specialStart"
-    ).value;
-
-
-  const endTime =
-    document.getElementById(
-      "specialEnd"
-    ).value;
-
-
-  const note =
-    document.getElementById(
-      "specialNote"
-    ).value.trim();
-
-
-  if (
-    !date ||
-    !startTime ||
-    !endTime
-  ) {
-
-    showMessage(
-      "specialMessage",
-      "Date et horaires obligatoires.",
-      "error"
-    );
-
-    return;
-
-  }
-
-
-  if (
-    startTime >=
-    endTime
-  ) {
-
-    showMessage(
-      "specialMessage",
-      "L'heure de fin doit être après l'heure de début.",
-      "error"
-    );
-
-    return;
-
-  }
-
-
-  try {
-
-    await adminRequest({
-
-      action:
-        "createSpecialHours",
-
-      date,
-
-      startTime,
-
-      endTime,
-
-      note
-
+    console.error(error);
+
+    return res.status(500).json({
+      error:
+        error.message ||
+        "Erreur serveur"
     });
 
-
-    closeSpecialModal();
-
-
-    showMessage(
-      "adminMessage",
-      "Ouverture exceptionnelle ajoutée.",
-      "success"
-    );
-
-
-    await loadAdmin();
-
-
-  } catch (error) {
-
-    showMessage(
-      "specialMessage",
-      error.message,
-      "error"
-    );
-
   }
 
 }
-
-
-/* =====================================================
-   BLOCAGE
-   ===================================================== */
-
-function openBlockedModal() {
-
-  hideMessage(
-    "blockedMessage"
-  );
-
-  document
-    .getElementById(
-      "blockedModal"
-    )
-    .classList.add(
-      "show"
-    );
-
-}
-
-
-function closeBlockedModal() {
-
-  document
-    .getElementById(
-      "blockedModal"
-    )
-    .classList.remove(
-      "show"
-    );
-
-}
-
-
-async function submitBlockedPeriod() {
-
-  const date =
-    document.getElementById(
-      "blockedDate"
-    ).value;
-
-
-  const startTime =
-    document.getElementById(
-      "blockedStart"
-    ).value;
-
-
-  const endTime =
-    document.getElementById(
-      "blockedEnd"
-    ).value;
-
-
-  const reason =
-    document.getElementById(
-      "blockedReason"
-    ).value.trim();
-
-
-  if (
-    !date ||
-    !startTime ||
-    !endTime
-  ) {
-
-    showMessage(
-      "blockedMessage",
-      "Date et horaires obligatoires.",
-      "error"
-    );
-
-    return;
-
-  }
-
-
-  if (
-    startTime >=
-    endTime
-  ) {
-
-    showMessage(
-      "blockedMessage",
-      "L'heure de fin doit être après l'heure de début.",
-      "error"
-    );
-
-    return;
-
-  }
-
-
-  try {
-
-    await adminRequest({
-
-      action:
-        "createBlockedPeriod",
-
-      date,
-
-      startTime,
-
-      endTime,
-
-      reason
-
-    });
-
-
-    closeBlockedModal();
-
-
-    showMessage(
-      "adminMessage",
-      "Période bloquée.",
-      "success"
-    );
-
-
-    await loadAdmin();
-
-
-  } catch (error) {
-
-    showMessage(
-      "blockedMessage",
-      error.message,
-      "error"
-    );
-
-  }
-
-}
-
-
-/* =====================================================
-   LISTE OUVERTURES
-   ===================================================== */
-
-function renderSpecialHours(items) {
-
-  const container =
-    document.getElementById(
-      "specialHoursList"
-    );
-
-
-  if (!items.length) {
-
-    container.innerHTML =
-      `<div class="subtitle">
-        Aucune ouverture exceptionnelle.
-       </div>`;
-
-    return;
-
-  }
-
-
-  container.innerHTML =
-    "";
-
-
-  items.forEach(item => {
-
-    const row =
-      document.createElement(
-        "div"
-      );
-
-
-    row.className =
-      "booking-row";
-
-
-    row.innerHTML = `
-
-      <div class="booking-main">
-
-        <div>
-
-          <strong>
-            ${formatDate(
-              item.date
-            )}
-          </strong>
-
-          <div class="booking-meta">
-            ${item.start_time.substring(0,5)}
-            →
-            ${item.end_time.substring(0,5)}
-          </div>
-
-          ${
-            item.note
-            ? `
-              <div class="booking-meta">
-                ${item.note}
-              </div>
-            `
-            : ""
-          }
-
-        </div>
-
-
-        <button
-          class="btn danger"
-          onclick="deleteSpecialHours('${item.id}')"
-        >
-          Supprimer
-        </button>
-
-      </div>
-
-    `;
-
-
-    container.appendChild(
-      row
-    );
-
-  });
-
-}
-
-
-/* =====================================================
-   LISTE BLOCAGES
-   ===================================================== */
-
-function renderBlocked(items) {
-
-  const container =
-    document.getElementById(
-      "blockedList"
-    );
-
-
-  if (!items.length) {
-
-    container.innerHTML =
-      `<div class="subtitle">
-        Aucun blocage.
-       </div>`;
-
-    return;
-
-  }
-
-
-  container.innerHTML =
-    "";
-
-
-  items.forEach(item => {
-
-    const row =
-      document.createElement(
-        "div"
-      );
-
-
-    row.className =
-      "booking-row";
-
-
-    row.innerHTML = `
-
-      <div class="booking-main">
-
-        <div>
-
-          <strong>
-            ${formatDate(
-              item.date
-            )}
-          </strong>
-
-          <div class="booking-meta">
-            ${item.start_time.substring(0,5)}
-            →
-            ${item.end_time.substring(0,5)}
-          </div>
-
-          ${
-            item.reason
-            ? `
-              <div class="booking-meta">
-                ${item.reason}
-              </div>
-            `
-            : ""
-          }
-
-        </div>
-
-
-        <button
-          class="btn danger"
-          onclick="deleteBlockedPeriod('${item.id}')"
-        >
-          Supprimer
-        </button>
-
-      </div>
-
-    `;
-
-
-    container.appendChild(
-      row
-    );
-
-  });
-
-}
-
-
-/* =====================================================
-   SUPPRIMER OUVERTURE
-   ===================================================== */
-
-async function deleteSpecialHours(id) {
-
-  if (
-    !confirm(
-      "Supprimer cette ouverture exceptionnelle ?"
-    )
-  ) {
-    return;
-  }
-
-
-  try {
-
-    await adminRequest({
-
-      action:
-        "deleteSpecialHours",
-
-      id
-
-    });
-
-
-    await loadAdmin();
-
-
-  } catch (error) {
-
-    showMessage(
-      "adminMessage",
-      error.message,
-      "error"
-    );
-
-  }
-
-}
-
-
-/* =====================================================
-   SUPPRIMER BLOCAGE
-   ===================================================== */
-
-async function deleteBlockedPeriod(id) {
-
-  if (
-    !confirm(
-      "Supprimer ce blocage ?"
-    )
-  ) {
-    return;
-  }
-
-
-  try {
-
-    await adminRequest({
-
-      action:
-        "deleteBlockedPeriod",
-
-      id
-
-    });
-
-
-    await loadAdmin();
-
-
-  } catch (error) {
-
-    showMessage(
-      "adminMessage",
-      error.message,
-      "error"
-    );
-
-  }
-
-}
-
-
-/* =====================================================
-   MOIS
-   ===================================================== */
-
-function changeMonth(delta) {
-
-  const input =
-    document.getElementById(
-      "filterMonth"
-    );
-
-
-  const [
-    year,
-    month
-  ] =
-    input.value
-      .split("-")
-      .map(Number);
-
-
-  const date =
-    new Date(
-      year,
-      month - 1 + delta,
-      1
-    );
-
-
-  input.value =
-    date.getFullYear() +
-    "-" +
-    pad(
-      date.getMonth() + 1
-    );
-
-
-  renderCalendar();
-
-}
-
-
-/* =====================================================
-   FILTRES
-   ===================================================== */
-
-document
-  .getElementById(
-    "filterMonth"
-  )
-  .addEventListener(
-    "change",
-    renderCalendar
-  );
-
-
-document
-  .getElementById(
-    "filterSession"
-  )
-  .addEventListener(
-    "change",
-    renderCalendar
-  );
-
-
-/* =====================================================
-   INITIALISATION
-   ===================================================== */
-
-const today =
-  new Date();
-
-
-document.getElementById(
-  "filterMonth"
-).value =
-  today.getFullYear() +
-  "-" +
-  pad(
-    today.getMonth() + 1
-  );
-
-</script>
-
-</body>
-</html>
