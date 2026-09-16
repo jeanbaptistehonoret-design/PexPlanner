@@ -20,6 +20,7 @@ export default async function handler(req, res) {
       action
     } = req.body || {};
 
+
     /* =====================================================
        SECURITE
        ===================================================== */
@@ -35,7 +36,7 @@ export default async function handler(req, res) {
 
 
     /* =====================================================
-       CONNEXION
+       LOGIN
        ===================================================== */
 
     if (action === "login") {
@@ -48,7 +49,7 @@ export default async function handler(req, res) {
 
 
     /* =====================================================
-       RECUPERER TOUTES LES DONNEES
+       DONNEES ADMIN
        ===================================================== */
 
     if (action === "data") {
@@ -60,7 +61,9 @@ export default async function handler(req, res) {
         .from("sessions")
         .select("*")
         .eq("active", true)
+        .order("duration")
         .order("name");
+
 
       if (sessionsError) {
         throw sessionsError;
@@ -93,6 +96,7 @@ export default async function handler(req, res) {
           ascending: true
         });
 
+
       if (slotsError) {
         throw slotsError;
       }
@@ -105,6 +109,7 @@ export default async function handler(req, res) {
         .from("bookings")
         .select(`
           id,
+          slot_id,
           first_name,
           last_name,
           email,
@@ -113,29 +118,102 @@ export default async function handler(req, res) {
           participants,
           comment,
           source,
-          created_at,
-          slot_id
+          partner_name,
+          created_at
         `)
         .order("created_at", {
           ascending: false
         });
+
 
       if (bookingsError) {
         throw bookingsError;
       }
 
 
+      /*
+       Horaires habituels
+      */
+
+      const {
+        data: openingHours,
+        error: openingError
+      } = await supabase
+        .from("opening_hours")
+        .select("*")
+        .order("day_of_week");
+
+
+      if (openingError) {
+        throw openingError;
+      }
+
+
+      /*
+       Exceptions
+      */
+
+      const {
+        data: specialHours,
+        error: specialError
+      } = await supabase
+        .from("special_hours")
+        .select("*")
+        .order("date")
+        .order("start_time");
+
+
+      if (specialError) {
+        throw specialError;
+      }
+
+
+      /*
+       Blocages
+      */
+
+      const {
+        data: blockedPeriods,
+        error: blockedError
+      } = await supabase
+        .from("blocked_periods")
+        .select("*")
+        .order("date")
+        .order("start_time");
+
+
+      if (blockedError) {
+        throw blockedError;
+      }
+
+
       return res.status(200).json({
-        sessions,
-        slots,
-        bookings
+
+        sessions:
+          sessions || [],
+
+        slots:
+          slots || [],
+
+        bookings:
+          bookings || [],
+
+        openingHours:
+          openingHours || [],
+
+        specialHours:
+          specialHours || [],
+
+        blockedPeriods:
+          blockedPeriods || []
+
       });
 
     }
 
 
     /* =====================================================
-       CREER UN CRENEAU
+       CREER UN CRENEAU MANUEL
        ===================================================== */
 
     if (action === "createSlot") {
@@ -161,10 +239,6 @@ export default async function handler(req, res) {
       }
 
 
-      /*
-       Vérification du doublon
-      */
-
       const {
         data: existing
       } = await supabase
@@ -180,10 +254,12 @@ export default async function handler(req, res) {
         existing &&
         existing.length > 0
       ) {
+
         return res.status(409).json({
           error:
             "Ce créneau existe déjà"
         });
+
       }
 
 
@@ -193,19 +269,27 @@ export default async function handler(req, res) {
       } = await supabase
         .from("slots")
         .insert({
+
           date,
+
           time,
-          session_id: sessionId,
+
+          session_id:
+            sessionId,
+
           status:
             source === "partner"
               ? "unavailable"
               : "available",
+
           source:
             source ||
             "pilotexperience",
+
           note:
             note ||
             null
+
         })
         .select()
         .single();
@@ -225,7 +309,7 @@ export default async function handler(req, res) {
 
 
     /* =====================================================
-       MODIFIER LE STATUT D'UN CRENEAU
+       BLOQUER UN CRENEAU
        ===================================================== */
 
     if (action === "changeSlot") {
@@ -257,11 +341,6 @@ export default async function handler(req, res) {
         });
       }
 
-
-      /*
-       Impossible de libérer un créneau
-       qui possède déjà une réservation
-      */
 
       if (
         status === "available"
@@ -321,9 +400,7 @@ export default async function handler(req, res) {
        RESERVATION PARTENAIRE
        ===================================================== */
 
-    if (
-      action === "partnerBooking"
-    ) {
+    if (action === "partnerBooking") {
 
       const {
         slotId,
@@ -348,15 +425,11 @@ export default async function handler(req, res) {
 
         return res.status(400).json({
           error:
-            "Créneau, partenaire, nom et numéro de billet obligatoires"
+            "Créneau, partenaire, prénom, nom et billet obligatoires"
         });
 
       }
 
-
-      /*
-       Vérifier le créneau
-      */
 
       const {
         data: slot,
@@ -368,12 +441,7 @@ export default async function handler(req, res) {
           status,
           date,
           time,
-          session_id,
-          sessions (
-            id,
-            name,
-            duration
-          )
+          session_id
         `)
         .eq("id", slotId)
         .single();
@@ -404,24 +472,13 @@ export default async function handler(req, res) {
       }
 
 
-      /*
-       Vérifier qu'il n'existe
-       pas déjà une réservation
-      */
-
       const {
-        data: existingBooking,
-        error: existingBookingError
+        data: existingBooking
       } = await supabase
         .from("bookings")
         .select("id")
         .eq("slot_id", slotId)
         .limit(1);
-
-
-      if (existingBookingError) {
-        throw existingBookingError;
-      }
 
 
       if (
@@ -437,10 +494,6 @@ export default async function handler(req, res) {
       }
 
 
-      /*
-       Créer la réservation
-      */
-
       const {
         data: booking,
         error: bookingError
@@ -448,7 +501,8 @@ export default async function handler(req, res) {
         .from("bookings")
         .insert({
 
-          slot_id: slotId,
+          slot_id:
+            slotId,
 
           first_name:
             firstName,
@@ -472,6 +526,9 @@ export default async function handler(req, res) {
             comment || null,
 
           source:
+            "partner",
+
+          partner_name:
             partner
 
         })
@@ -483,10 +540,6 @@ export default async function handler(req, res) {
         throw bookingError;
       }
 
-
-      /*
-       Bloquer le créneau
-      */
 
       const {
         error: updateError
@@ -517,7 +570,8 @@ export default async function handler(req, res) {
 
       return res.status(201).json({
 
-        success: true,
+        success:
+          true,
 
         booking
 
@@ -527,12 +581,10 @@ export default async function handler(req, res) {
 
 
     /* =====================================================
-       SUPPRIMER UN CRENEAU
+       LIBERER UN CRENEAU
        ===================================================== */
 
-    if (
-      action === "deleteSlot"
-    ) {
+    if (action === "releaseSlot") {
 
       const {
         slotId
@@ -543,26 +595,18 @@ export default async function handler(req, res) {
 
         return res.status(400).json({
           error:
-            "Identifiant du créneau manquant"
+            "Identifiant manquant"
         });
 
       }
 
-
-      /*
-       Ne jamais supprimer
-       un créneau avec réservation
-      */
 
       const {
         data: bookings
       } = await supabase
         .from("bookings")
         .select("id")
-        .eq(
-          "slot_id",
-          slotId
-        )
+        .eq("slot_id", slotId)
         .limit(1);
 
 
@@ -573,7 +617,84 @@ export default async function handler(req, res) {
 
         return res.status(409).json({
           error:
-            "Impossible de supprimer ce créneau : il possède une réservation."
+            "Ce créneau possède une réservation."
+        });
+
+      }
+
+
+      const {
+        error
+      } = await supabase
+        .from("slots")
+        .update({
+
+          status:
+            "available",
+
+          source:
+            "pilotexperience",
+
+          note:
+            null
+
+        })
+        .eq(
+          "id",
+          slotId
+        );
+
+
+      if (error) {
+        throw error;
+      }
+
+
+      return res.status(200).json({
+        success: true
+      });
+
+    }
+
+
+    /* =====================================================
+       SUPPRIMER UN CRENEAU
+       ===================================================== */
+
+    if (action === "deleteSlot") {
+
+      const {
+        slotId
+      } = req.body;
+
+
+      if (!slotId) {
+
+        return res.status(400).json({
+          error:
+            "Identifiant manquant"
+        });
+
+      }
+
+
+      const {
+        data: bookings
+      } = await supabase
+        .from("bookings")
+        .select("id")
+        .eq("slot_id", slotId)
+        .limit(1);
+
+
+      if (
+        bookings &&
+        bookings.length > 0
+      ) {
+
+        return res.status(409).json({
+          error:
+            "Impossible : ce créneau possède une réservation."
         });
 
       }
@@ -603,53 +724,171 @@ export default async function handler(req, res) {
 
 
     /* =====================================================
-       LIBERER UN CRENEAU
+       OUVERTURE EXCEPTIONNELLE
        ===================================================== */
 
     if (
-      action === "releaseSlot"
+      action === "createSpecialHours"
     ) {
 
       const {
-        slotId
+        date,
+        startTime,
+        endTime,
+        note
       } = req.body;
 
 
-      if (!slotId) {
+      if (
+        !date ||
+        !startTime ||
+        !endTime
+      ) {
 
         return res.status(400).json({
           error:
-            "Identifiant du créneau manquant"
+            "Date, heure de début et heure de fin obligatoires"
         });
 
       }
 
 
-      /*
-       Vérifier qu'il n'y a pas
-       déjà une réservation
-      */
+      const {
+        data,
+        error
+      } = await supabase
+        .from("special_hours")
+        .insert({
+
+          date,
+
+          is_open:
+            true,
+
+          start_time:
+            startTime,
+
+          end_time:
+            endTime,
+
+          note:
+            note || null
+
+        })
+        .select()
+        .single();
+
+
+      if (error) {
+        throw error;
+      }
+
+
+      return res.status(201).json({
+
+        success:
+          true,
+
+        specialHours:
+          data
+
+      });
+
+    }
+
+
+    /* =====================================================
+       FERMETURE EXCEPTIONNELLE
+       ===================================================== */
+
+    if (
+      action === "createBlockedPeriod"
+    ) {
 
       const {
-        data: bookings
-      } = await supabase
-        .from("bookings")
-        .select("id")
-        .eq(
-          "slot_id",
-          slotId
-        )
-        .limit(1);
+        date,
+        startTime,
+        endTime,
+        reason
+      } = req.body;
 
 
       if (
-        bookings &&
-        bookings.length > 0
+        !date ||
+        !startTime ||
+        !endTime
       ) {
 
-        return res.status(409).json({
+        return res.status(400).json({
           error:
-            "Ce créneau possède une réservation."
+            "Date, heure de début et heure de fin obligatoires"
+        });
+
+      }
+
+
+      const {
+        data,
+        error
+      } = await supabase
+        .from("blocked_periods")
+        .insert({
+
+          date,
+
+          start_time:
+            startTime,
+
+          end_time:
+            endTime,
+
+          reason:
+            reason || null,
+
+          source:
+            "pilotexperience"
+
+        })
+        .select()
+        .single();
+
+
+      if (error) {
+        throw error;
+      }
+
+
+      return res.status(201).json({
+
+        success:
+          true,
+
+        blockedPeriod:
+          data
+
+      });
+
+    }
+
+
+    /* =====================================================
+       SUPPRIMER UNE EXCEPTION
+       ===================================================== */
+
+    if (
+      action === "deleteSpecialHours"
+    ) {
+
+      const {
+        id
+      } = req.body;
+
+
+      if (!id) {
+
+        return res.status(400).json({
+          error:
+            "Identifiant manquant"
         });
 
       }
@@ -658,21 +897,52 @@ export default async function handler(req, res) {
       const {
         error
       } = await supabase
-        .from("slots")
-        .update({
-          status:
-            "available",
+        .from("special_hours")
+        .delete()
+        .eq("id", id);
 
-          source:
-            "pilotexperience",
 
-          note:
-            null
-        })
-        .eq(
-          "id",
-          slotId
-        );
+      if (error) {
+        throw error;
+      }
+
+
+      return res.status(200).json({
+        success: true
+      });
+
+    }
+
+
+    /* =====================================================
+       SUPPRIMER UN BLOCAGE
+       ===================================================== */
+
+    if (
+      action === "deleteBlockedPeriod"
+    ) {
+
+      const {
+        id
+      } = req.body;
+
+
+      if (!id) {
+
+        return res.status(400).json({
+          error:
+            "Identifiant manquant"
+        });
+
+      }
+
+
+      const {
+        error
+      } = await supabase
+        .from("blocked_periods")
+        .delete()
+        .eq("id", id);
 
 
       if (error) {
