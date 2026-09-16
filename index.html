@@ -1,15 +1,942 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PexPlanner</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PilotExperience — Réservation</title>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #f5f7fa;
+  color: #17212b;
+}
+
+.container {
+  max-width: 1100px;
+  margin: auto;
+  padding: 30px 15px;
+}
+
+.card {
+  background: white;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0,0,0,.08);
+}
+
+.header {
+  background: #102943;
+  color: white;
+  padding: 25px;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 25px;
+}
+
+.header p {
+  margin: 7px 0 0;
+  opacity: .75;
+}
+
+.content {
+  padding: 25px;
+}
+
+.controls {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+  margin-bottom: 25px;
+}
+
+.field {
+  flex: 1;
+  min-width: 220px;
+}
+
+label {
+  display: block;
+  font-size: 13px;
+  font-weight: bold;
+  margin-bottom: 6px;
+}
+
+select,
+input,
+textarea {
+  width: 100%;
+  padding: 11px;
+  border: 1px solid #ccd4dc;
+  border-radius: 10px;
+  font-size: 14px;
+}
+
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.calendar-header h2 {
+  margin: 0;
+  font-size: 18px;
+  text-transform: capitalize;
+}
+
+.calendar-header button {
+  width: 38px;
+  height: 38px;
+  border: 1px solid #ddd;
+  background: white;
+  border-radius: 9px;
+  cursor: pointer;
+  font-size: 20px;
+}
+
+.calendar {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 7px;
+}
+
+.weekday {
+  text-align: center;
+  font-size: 10px;
+  font-weight: bold;
+  color: #6b7785;
+  text-transform: uppercase;
+}
+
+.day {
+  min-height: 100px;
+  border: 1px solid #e0e5ea;
+  border-radius: 10px;
+  padding: 7px;
+  background: #fafbfc;
+}
+
+.day.empty {
+  border: none;
+  background: transparent;
+}
+
+.day-number {
+  font-size: 12px;
+  font-weight: bold;
+  margin-bottom: 6px;
+}
+
+.slot {
+  width: 100%;
+  margin-top: 5px;
+  padding: 7px;
+  border-radius: 8px;
+  border: 1px solid #cbd7e2;
+  background: #f7fbff;
+  text-align: left;
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.slot:hover {
+  border-color: #245f9f;
+}
+
+.slot.unavailable {
+  background: #eef0f2;
+  color: #7c858e;
+  cursor: not-allowed;
+}
+
+.slot.selected {
+  background: #102943;
+  color: white;
+  border-color: #102943;
+}
+
+.slot strong {
+  display: block;
+}
+
+.selection {
+  margin-top: 25px;
+  padding-top: 25px;
+  border-top: 1px solid #ddd;
+}
+
+.selected-info {
+  background: #f4f7fa;
+  border: 1px solid #dde4ea;
+  padding: 14px;
+  border-radius: 10px;
+  margin-bottom: 18px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.full {
+  grid-column: 1 / -1;
+}
+
+.submit {
+  margin-top: 18px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.submit button {
+  background: #102943;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 13px 20px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.submit button:disabled {
+  opacity: .5;
+}
+
+.message {
+  margin-top: 15px;
+  padding: 12px;
+  border-radius: 10px;
+  display: none;
+}
+
+.success {
+  display: block;
+  background: #edf8f1;
+  color: #197446;
+}
+
+.error {
+  display: block;
+  background: #fff0ee;
+  color: #9d3026;
+}
+
+.status {
+  text-align: center;
+  color: #6b7785;
+  font-size: 13px;
+  padding: 15px;
+}
+
+@media (max-width: 700px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .full {
+    grid-column: auto;
+  }
+
+  .calendar {
+    gap: 4px;
+  }
+
+  .day {
+    min-height: 80px;
+  }
+}
+</style>
 </head>
 
-<body style="font-family:Arial;text-align:center;padding:80px">
+<body>
 
-  <h1>PexPlanner</h1>
-  <p>Le serveur fonctionne.</p>
+<div class="container">
+
+  <div class="card">
+
+    <div class="header">
+      <h1>PilotExperience</h1>
+      <p>Réservation de votre séance</p>
+    </div>
+
+    <div class="content">
+
+      <div class="controls">
+
+        <div class="field">
+          <label>Type de séance</label>
+          <select id="session"></select>
+        </div>
+
+        <div class="field">
+          <label>Mois</label>
+          <input type="month" id="month">
+        </div>
+
+      </div>
+
+      <div class="calendar-header">
+
+        <h2 id="monthTitle"></h2>
+
+        <div>
+          <button onclick="changeMonth(-1)">‹</button>
+          <button onclick="changeMonth(1)">›</button>
+        </div>
+
+      </div>
+
+      <div id="calendar" class="calendar"></div>
+
+      <div id="status" class="status">
+        Chargement du planning...
+      </div>
+
+      <div class="selection">
+
+        <div id="selectedInfo" class="selected-info">
+          Sélectionnez un créneau.
+        </div>
+
+        <form id="bookingForm">
+
+          <div class="form-grid">
+
+            <div>
+              <label>Prénom *</label>
+              <input id="firstName" required>
+            </div>
+
+            <div>
+              <label>Nom *</label>
+              <input id="lastName" required>
+            </div>
+
+            <div>
+              <label>E-mail *</label>
+              <input id="email" type="email" required>
+            </div>
+
+            <div>
+              <label>Téléphone *</label>
+              <input id="phone" required>
+            </div>
+
+            <div>
+              <label>Numéro de billet *</label>
+              <input id="ticket" required>
+            </div>
+
+            <div>
+              <label>Participants</label>
+              <select id="participants">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+              </select>
+            </div>
+
+            <div class="full">
+              <label>Commentaire</label>
+              <textarea id="comment" rows="3"></textarea>
+            </div>
+
+          </div>
+
+          <div class="submit">
+            <button id="submitButton" type="submit">
+              Confirmer ma réservation
+            </button>
+          </div>
+
+          <div id="message" class="message"></div>
+
+        </form>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+<script>
+
+const API = "/api";
+
+let slots = [];
+let sessions = [];
+let selectedSlot = null;
+
+
+/* DATE */
+
+function pad(number) {
+  return String(number).padStart(2, "0");
+}
+
+
+/* FORMAT DATE */
+
+function formatDate(date) {
+
+  return new Date(date + "T12:00:00")
+    .toLocaleDateString("fr-FR", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric"
+    });
+}
+
+
+/* DUREE */
+
+function duration(minutes) {
+
+  if (minutes === 60) return "1h";
+  if (minutes === 90) return "1h30";
+  if (minutes === 180) return "3h";
+
+  return minutes + " min";
+}
+
+
+/* CHARGEMENT DU PLANNING */
+
+async function loadPlanning() {
+
+  try {
+
+    const response = await fetch(
+      API + "/slots",
+      { cache: "no-store" }
+    );
+
+    if (!response.ok) {
+
+      throw new Error(
+        "Impossible de charger le planning"
+      );
+
+    }
+
+    slots = await response.json();
+
+    sessions = [];
+
+    slots.forEach(slot => {
+
+      if (
+        slot.sessions &&
+        !sessions.some(s => s.id === slot.sessions.id)
+      ) {
+
+        sessions.push(slot.sessions);
+
+      }
+
+    });
+
+
+    const select =
+      document.getElementById("session");
+
+    select.innerHTML = "";
+
+    sessions.forEach(session => {
+
+      const option =
+        document.createElement("option");
+
+      option.value = session.id;
+      option.textContent = session.name;
+
+      select.appendChild(option);
+
+    });
+
+
+    select.onchange = renderCalendar;
+
+    renderCalendar();
+
+  } catch (error) {
+
+    document.getElementById("status")
+      .textContent =
+      "Le planning est momentanément indisponible.";
+
+    showMessage(
+      error.message,
+      "error"
+    );
+
+  }
+
+}
+
+
+/* CALENDRIER */
+
+function renderCalendar() {
+
+  const month =
+    document.getElementById("month").value;
+
+  if (!month) return;
+
+  const [
+    year,
+    monthNumber
+  ] = month.split("-").map(Number);
+
+  const first =
+    new Date(
+      year,
+      monthNumber - 1,
+      1
+    );
+
+  const numberOfDays =
+    new Date(
+      year,
+      monthNumber,
+      0
+    ).getDate();
+
+  const offset =
+    (first.getDay() + 6) % 7;
+
+
+  document.getElementById("monthTitle")
+    .textContent =
+    first.toLocaleDateString(
+      "fr-FR",
+      {
+        month: "long",
+        year: "numeric"
+      }
+    );
+
+
+  const calendar =
+    document.getElementById("calendar");
+
+  calendar.innerHTML = "";
+
+
+  const weekdays = [
+    "Lun",
+    "Mar",
+    "Mer",
+    "Jeu",
+    "Ven",
+    "Sam",
+    "Dim"
+  ];
+
+
+  weekdays.forEach(day => {
+
+    const element =
+      document.createElement("div");
+
+    element.className = "weekday";
+
+    element.textContent = day;
+
+    calendar.appendChild(element);
+
+  });
+
+
+  for (
+    let i = 0;
+    i < offset;
+    i++
+  ) {
+
+    const element =
+      document.createElement("div");
+
+    element.className =
+      "day empty";
+
+    calendar.appendChild(element);
+
+  }
+
+
+  const selectedSession =
+    document.getElementById("session").value;
+
+
+  for (
+    let day = 1;
+    day <= numberOfDays;
+    day++
+  ) {
+
+    const date =
+      year +
+      "-" +
+      pad(monthNumber) +
+      "-" +
+      pad(day);
+
+
+    const element =
+      document.createElement("div");
+
+    element.className = "day";
+
+
+    const number =
+      document.createElement("div");
+
+    number.className =
+      "day-number";
+
+    number.textContent = day;
+
+    element.appendChild(number);
+
+
+    const daySlots =
+      slots
+        .filter(slot =>
+          slot.date === date &&
+          slot.session_id === selectedSession
+        )
+        .sort((a,b) =>
+          a.time.localeCompare(b.time)
+        );
+
+
+    daySlots.forEach(slot => {
+
+      const button =
+        document.createElement("button");
+
+      button.type = "button";
+
+
+      const unavailable =
+        slot.status !== "available";
+
+
+      button.className =
+        "slot" +
+        (unavailable
+          ? " unavailable"
+          : "") +
+        (selectedSlot &&
+         selectedSlot.id === slot.id
+          ? " selected"
+          : "");
+
+
+      const session =
+        slot.sessions;
+
+
+      button.innerHTML =
+        "<strong>" +
+        slot.time.substring(0,5) +
+        " · " +
+        duration(session.duration) +
+        "</strong>" +
+        "<span>" +
+        (
+          unavailable
+            ? "Indisponible"
+            : "Disponible"
+        ) +
+        "</span>";
+
+
+      if (!unavailable) {
+
+        button.onclick = () =>
+          selectSlot(slot);
+
+      }
+
+
+      element.appendChild(button);
+
+    });
+
+
+    calendar.appendChild(element);
+
+  }
+
+}
+
+
+/* SELECTION */
+
+function selectSlot(slot) {
+
+  selectedSlot = slot;
+
+  const session =
+    slot.sessions;
+
+
+  document.getElementById("selectedInfo")
+    .innerHTML =
+    "<strong>" +
+    session.name +
+    "</strong><br>" +
+    formatDate(slot.date) +
+    " à " +
+    slot.time.substring(0,5) +
+    "<br>Durée : " +
+    duration(session.duration);
+
+
+  renderCalendar();
+
+}
+
+
+/* CHANGER DE MOIS */
+
+function changeMonth(direction) {
+
+  const input =
+    document.getElementById("month");
+
+  const [
+    year,
+    month
+  ] = input.value
+    .split("-")
+    .map(Number);
+
+
+  const date =
+    new Date(
+      year,
+      month - 1 + direction,
+      1
+    );
+
+
+  input.value =
+    date.getFullYear() +
+    "-" +
+    pad(date.getMonth() + 1);
+
+
+  selectedSlot = null;
+
+  renderCalendar();
+
+}
+
+
+/* MESSAGE */
+
+function showMessage(message,type) {
+
+  const element =
+    document.getElementById("message");
+
+  element.className =
+    "message " + type;
+
+  element.textContent =
+    message;
+
+}
+
+
+/* RESERVATION */
+
+document.getElementById("bookingForm")
+  .addEventListener(
+    "submit",
+    async function(event) {
+
+      event.preventDefault();
+
+
+      if (!selectedSlot) {
+
+        showMessage(
+          "Veuillez sélectionner un créneau.",
+          "error"
+        );
+
+        return;
+
+      }
+
+
+      const button =
+        document.getElementById(
+          "submitButton"
+        );
+
+
+      button.disabled = true;
+
+      button.textContent =
+        "Réservation en cours...";
+
+
+      const data = {
+
+        slotId:
+          selectedSlot.id,
+
+        firstName:
+          document.getElementById(
+            "firstName"
+          ).value.trim(),
+
+        lastName:
+          document.getElementById(
+            "lastName"
+          ).value.trim(),
+
+        email:
+          document.getElementById(
+            "email"
+          ).value.trim(),
+
+        phone:
+          document.getElementById(
+            "phone"
+          ).value.trim(),
+
+        ticket:
+          document.getElementById(
+            "ticket"
+          ).value.trim(),
+
+        participants:
+          Number(
+            document.getElementById(
+              "participants"
+            ).value
+          ),
+
+        comment:
+          document.getElementById(
+            "comment"
+          ).value.trim()
+
+      };
+
+
+      try {
+
+        const response =
+          await fetch(
+            API + "/booking",
+            {
+              method: "POST",
+
+              headers: {
+                "Content-Type":
+                  "application/json"
+              },
+
+              body:
+                JSON.stringify(data)
+            }
+          );
+
+
+        const result =
+          await response.json();
+
+
+        if (!response.ok) {
+
+          throw new Error(
+            result.error ||
+            "La réservation a échoué."
+          );
+
+        }
+
+
+        showMessage(
+          "Votre réservation est bien enregistrée.",
+          "success"
+        );
+
+
+        document
+          .getElementById("bookingForm")
+          .reset();
+
+
+        selectedSlot = null;
+
+
+        document.getElementById(
+          "selectedInfo"
+        ).textContent =
+          "Réservation enregistrée.";
+
+
+        await loadPlanning();
+
+
+      } catch (error) {
+
+        showMessage(
+          error.message,
+          "error"
+        );
+
+      }
+
+
+      button.disabled = false;
+
+      button.textContent =
+        "Confirmer ma réservation";
+
+    }
+  );
+
+
+/* MOIS ACTUEL */
+
+const today =
+  new Date();
+
+document.getElementById("month").value =
+  today.getFullYear() +
+  "-" +
+  pad(today.getMonth() + 1);
+
+
+/* DEMARRAGE */
+
+loadPlanning();
+
+</script>
 
 </body>
 </html>
