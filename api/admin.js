@@ -26,7 +26,6 @@ export default async function handler(req, res) {
     ========================= */
 
     if (password !== process.env.ADMIN_PASSWORD) {
-
       return res.status(401).json({
         success: false,
         error: "Mot de passe incorrect."
@@ -39,11 +38,9 @@ export default async function handler(req, res) {
     ========================= */
 
     if (action === "login") {
-
       return res.status(200).json({
         success: true
       });
-
     }
 
 
@@ -70,8 +67,8 @@ export default async function handler(req, res) {
         supabase
           .from("slots")
           .select("*")
-          .order("slot_date")
-          .order("start_time"),
+          .order("date")
+          .order("time"),
 
         supabase
           .from("bookings")
@@ -104,10 +101,7 @@ export default async function handler(req, res) {
       ========================= */
 
       if (sessionsResult.error) {
-        console.error(
-          "sessions:",
-          sessionsResult.error
-        );
+        console.error("sessions:", sessionsResult.error);
 
         throw new Error(
           "Erreur sessions : " +
@@ -116,10 +110,7 @@ export default async function handler(req, res) {
       }
 
       if (slotsResult.error) {
-        console.error(
-          "slots:",
-          slotsResult.error
-        );
+        console.error("slots:", slotsResult.error);
 
         throw new Error(
           "Erreur slots : " +
@@ -128,10 +119,7 @@ export default async function handler(req, res) {
       }
 
       if (bookingsResult.error) {
-        console.error(
-          "bookings:",
-          bookingsResult.error
-        );
+        console.error("bookings:", bookingsResult.error);
 
         throw new Error(
           "Erreur bookings : " +
@@ -242,7 +230,6 @@ export default async function handler(req, res) {
           );
 
         if (error) {
-
           throw new Error(
             "Erreur horaires : " +
             error.message
@@ -262,39 +249,69 @@ export default async function handler(req, res) {
 
     if (action === "createSlot") {
 
-      const {
-        slot_date,
-        start_time,
-        session_id,
-        status
-      } = body;
+      /*
+        On accepte les deux formats pour éviter
+        une incompatibilité avec l'ancienne interface :
+
+        nouveau :
+        date / time
+
+        ancien :
+        slot_date / start_time
+      */
+
+      const date =
+        body.date ||
+        body.slot_date;
+
+      const time =
+        body.time ||
+        body.start_time;
+
+      const session_id =
+        body.session_id;
+
+      const status =
+        body.status ||
+        "available";
+
 
       if (
-        !slot_date ||
-        !start_time ||
+        !date ||
+        !time ||
         !session_id
       ) {
 
         return res.status(400).json({
           success: false,
-          error: "Informations du créneau manquantes."
+          error: "Date, heure et session sont obligatoires."
         });
       }
 
-      const { data, error } =
-        await supabase
-          .from("slots")
-          .insert({
-            slot_date,
-            start_time,
-            session_id,
-            status:
-              status || "available"
-          })
-          .select()
-          .single();
+
+      const {
+        data,
+        error
+      } = await supabase
+        .from("slots")
+        .insert({
+
+          date,
+          time,
+          session_id,
+          status
+
+        })
+        .select()
+        .single();
+
 
       if (error) {
+
+        console.error(
+          "createSlot:",
+          error
+        );
 
         throw new Error(
           "Erreur création créneau : " +
@@ -302,9 +319,13 @@ export default async function handler(req, res) {
         );
       }
 
+
       return res.status(200).json({
+
         success: true,
+
         slot: data
+
       });
     }
 
@@ -328,6 +349,7 @@ export default async function handler(req, res) {
         });
       }
 
+
       const { error } =
         await supabase
           .from("slots")
@@ -336,6 +358,7 @@ export default async function handler(req, res) {
           })
           .eq("id", slotId);
 
+
       if (error) {
 
         throw new Error(
@@ -343,6 +366,7 @@ export default async function handler(req, res) {
           error.message
         );
       }
+
 
       return res.status(200).json({
         success: true
@@ -368,11 +392,13 @@ export default async function handler(req, res) {
         });
       }
 
+
       const { error } =
         await supabase
           .from("slots")
           .delete()
           .eq("id", slotId);
+
 
       if (error) {
 
@@ -381,6 +407,7 @@ export default async function handler(req, res) {
           error.message
         );
       }
+
 
       return res.status(200).json({
         success: true
@@ -406,6 +433,7 @@ export default async function handler(req, res) {
         comment
       } = body;
 
+
       if (
         !slotId ||
         !first_name ||
@@ -414,7 +442,8 @@ export default async function handler(req, res) {
 
         return res.status(400).json({
           success: false,
-          error: "Prénom, nom et créneau sont obligatoires."
+          error:
+            "Prénom, nom et créneau sont obligatoires."
         });
       }
 
@@ -430,6 +459,7 @@ export default async function handler(req, res) {
         .eq("id", slotId)
         .single();
 
+
       if (slotError || !slot) {
 
         return res.status(404).json({
@@ -443,7 +473,8 @@ export default async function handler(req, res) {
 
         return res.status(409).json({
           success: false,
-          error: "Ce créneau n'est plus disponible."
+          error:
+            "Ce créneau n'est plus disponible."
         });
       }
 
@@ -545,6 +576,7 @@ export default async function handler(req, res) {
             .delete()
             .eq("id", bookingId);
 
+
         if (error) {
 
           throw new Error(
@@ -564,6 +596,7 @@ export default async function handler(req, res) {
               status: "available"
             })
             .eq("id", slotId);
+
 
         if (error) {
 
@@ -594,6 +627,7 @@ export default async function handler(req, res) {
         end_time,
         note
       } = body;
+
 
       if (!date) {
 
@@ -659,6 +693,7 @@ export default async function handler(req, res) {
         id
       } = body;
 
+
       if (!id) {
 
         return res.status(400).json({
@@ -703,6 +738,7 @@ export default async function handler(req, res) {
         reason
       } = body;
 
+
       if (
         !date ||
         !start_time ||
@@ -711,7 +747,8 @@ export default async function handler(req, res) {
 
         return res.status(400).json({
           success: false,
-          error: "Date et horaires obligatoires."
+          error:
+            "Date et horaires obligatoires."
         });
       }
 
@@ -724,7 +761,9 @@ export default async function handler(req, res) {
         .insert({
 
           date,
+
           start_time,
+
           end_time,
 
           reason:
@@ -766,6 +805,7 @@ export default async function handler(req, res) {
       const {
         id
       } = body;
+
 
       if (!id) {
 
@@ -819,6 +859,7 @@ export default async function handler(req, res) {
       error
     );
 
+
     return res.status(500).json({
 
       success: false,
@@ -828,5 +869,6 @@ export default async function handler(req, res) {
         "Erreur serveur."
 
     });
+
   }
 }
