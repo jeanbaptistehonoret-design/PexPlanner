@@ -348,14 +348,12 @@
 
   <div id="globalMessage" class="message"></div>
 
-  <!-- FILTRES -->
   <div class="card">
     <h2>Planning</h2>
 
     <div class="toolbar">
 
-      <select id="monthFilter" onchange="renderCalendar()">
-      </select>
+      <select id="monthFilter" onchange="renderCalendar()"></select>
 
       <select id="sessionFilter" onchange="renderCalendar()">
         <option value="">Tous les packs</option>
@@ -380,7 +378,6 @@
     <div id="calendar" class="calendar"></div>
   </div>
 
-  <!-- HORAIRES HABITUELS -->
   <div class="card">
     <h2>Horaires habituels</h2>
 
@@ -395,21 +392,18 @@
     </button>
   </div>
 
-  <!-- RESERVATIONS -->
   <div class="card">
     <h2>Réservations</h2>
 
     <div id="bookingsContainer"></div>
   </div>
 
-  <!-- OUVERTURES SPECIALES -->
   <div class="card">
     <h2>Ouvertures exceptionnelles</h2>
 
     <div id="specialHoursContainer"></div>
   </div>
 
-  <!-- BLOQUAGES -->
   <div class="card">
     <h2>Blocages</h2>
 
@@ -418,8 +412,6 @@
 
 </div>
 
-
-<!-- MODAL CREATION CRENEAU -->
 <div id="slotModal" class="modal">
 
   <div class="modal-box">
@@ -463,8 +455,6 @@
   </div>
 </div>
 
-
-<!-- MODAL OUVERTURE -->
 <div id="specialModal" class="modal">
 
   <div class="modal-box">
@@ -501,10 +491,7 @@
 
     </div>
 
-    <label style="display:block;margin-top:12px;">
-      Note
-    </label>
-
+    <label style="display:block;margin-top:12px;">Note</label>
     <textarea id="specialNote" placeholder="Ex : ouverture exceptionnelle"></textarea>
 
     <button class="warning" onclick="createSpecialHours()" style="margin-top:15px;">
@@ -514,8 +501,6 @@
   </div>
 </div>
 
-
-<!-- MODAL BLOCAGE -->
 <div id="blockedModal" class="modal">
 
   <div class="modal-box">
@@ -556,8 +541,6 @@
   </div>
 </div>
 
-
-<!-- MODAL PARTENAIRE -->
 <div id="partnerModal" class="modal">
 
   <div class="modal-box">
@@ -608,10 +591,7 @@
 
     </div>
 
-    <label style="display:block;margin-top:12px;">
-      Commentaire
-    </label>
-
+    <label style="display:block;margin-top:12px;">Commentaire</label>
     <textarea id="partnerComment"></textarea>
 
     <button class="success" onclick="createPartnerBooking()" style="margin-top:15px;">
@@ -620,7 +600,6 @@
 
   </div>
 </div>
-
 
 <script>
 
@@ -691,37 +670,27 @@ async function login() {
   const password = document.getElementById("passwordInput").value.trim();
 
   if (!password) {
-
     showLoginMessage("Entre le mot de passe.");
-
     return;
   }
 
   try {
 
     const response = await fetch("/api/admin", {
-
       method: "POST",
-
       headers: {
         "Content-Type": "application/json"
       },
-
       body: JSON.stringify({
         action: "login",
         password
       })
-
     });
 
     const result = await response.json();
 
     if (!response.ok || !result.success) {
-
-      showLoginMessage(
-        result.error || "Mot de passe incorrect."
-      );
-
+      showLoginMessage(result.error || "Mot de passe incorrect.");
       return;
     }
 
@@ -733,12 +702,8 @@ async function login() {
     await loadData();
 
   } catch (error) {
-
     console.error(error);
-
-    showLoginMessage(
-      "Erreur de connexion au serveur."
-    );
+    showLoginMessage("Erreur de connexion au serveur.");
   }
 }
 
@@ -752,29 +717,20 @@ async function loadData() {
   try {
 
     const response = await fetch("/api/admin", {
-
       method: "POST",
-
       headers: {
         "Content-Type": "application/json"
       },
-
       body: JSON.stringify({
         action: "data",
         password: adminPassword
       })
-
     });
 
     const result = await response.json();
 
     if (!response.ok || !result.success) {
-
-      showMessage(
-        result.error || "Impossible de charger les données.",
-        "error"
-      );
-
+      showMessage(result.error || "Impossible de charger les données.", "error");
       return;
     }
 
@@ -782,32 +738,21 @@ async function loadData() {
       sessions: Array.isArray(result.sessions) ? result.sessions : [],
       slots: Array.isArray(result.slots) ? result.slots : [],
       bookings: Array.isArray(result.bookings) ? result.bookings : [],
-      openingHours: Array.isArray(result.openingHours)
-        ? result.openingHours
-        : [],
-      specialHours: Array.isArray(result.specialHours)
-        ? result.specialHours
-        : [],
-      blockedPeriods: Array.isArray(result.blockedPeriods)
-        ? result.blockedPeriods
-        : []
+      openingHours: Array.isArray(result.openingHours) ? result.openingHours : [],
+      specialHours: Array.isArray(result.specialHours) ? result.specialHours : [],
+      blockedPeriods: Array.isArray(result.blockedPeriods) ? result.blockedPeriods : []
     };
 
     populateFilters();
     renderCalendar();
-    renderOpeningHours();
-    renderBookings();
-    renderSpecialHours();
-    renderBlocked();
+    renderOpeningHours(data.openingHours);
+    renderBookings(data.bookings);
+    renderSpecialHours(data.specialHours);
+    renderBlocked(data.blockedPeriods);
 
   } catch (error) {
-
     console.error(error);
-
-    showMessage(
-      "Erreur lors du chargement.",
-      "error"
-    );
+    showMessage("Erreur lors du chargement.", "error");
   }
 }
 
@@ -831,31 +776,22 @@ function populateFilters() {
 
   for (let i = 0; i < 3; i++) {
 
-    const date = new Date(
-      now.getFullYear(),
-      now.getMonth() + i,
-      1
-    );
+    const date = new Date(now.getFullYear(), now.getMonth() + i, 1);
 
     const value =
       date.getFullYear() +
       "-" +
       String(date.getMonth() + 1).padStart(2, "0");
 
-    const label = date.toLocaleDateString(
-      "fr-FR",
-      {
-        month: "long",
-        year: "numeric"
-      }
-    );
+    const label = date.toLocaleDateString("fr-FR", {
+      month: "long",
+      year: "numeric"
+    });
 
     const option = document.createElement("option");
 
     option.value = value;
-    option.textContent =
-      label.charAt(0).toUpperCase() +
-      label.slice(1);
+    option.textContent = label.charAt(0).toUpperCase() + label.slice(1);
 
     monthSelect.appendChild(option);
   }
@@ -866,15 +802,12 @@ function populateFilters() {
 
   if (!monthSelect.value) {
     const first = monthSelect.querySelector("option");
-
     if (first) {
       monthSelect.value = first.value;
     }
   }
 
-  sessionSelect.innerHTML =
-    '<option value="">Tous les packs</option>';
-
+  sessionSelect.innerHTML = '<option value="">Tous les packs</option>';
   slotSessionSelect.innerHTML = "";
 
   data.sessions.forEach(session => {
@@ -885,7 +818,7 @@ function populateFilters() {
     option.textContent =
       session.name +
       " — " +
-      session.duration_minutes +
+      session.duration +
       " min";
 
     sessionSelect.appendChild(option.cloneNode(true));
@@ -905,68 +838,39 @@ function populateFilters() {
 function renderCalendar() {
 
   const container = document.getElementById("calendar");
-
   container.innerHTML = "";
 
-  const selectedMonth =
-    document.getElementById("monthFilter").value;
+  const selectedMonth = document.getElementById("monthFilter").value;
 
   if (!selectedMonth) {
     return;
   }
 
-  const [year, month] =
-    selectedMonth.split("-").map(Number);
+  const [year, month] = selectedMonth.split("-").map(Number);
 
-  const firstDay =
-    new Date(year, month - 1, 1);
+  const firstDay = new Date(year, month - 1, 1);
+  const lastDay = new Date(year, month, 0);
 
-  const lastDay =
-    new Date(year, month, 0);
+  const firstWeekDay = (firstDay.getDay() + 6) % 7;
+  const daysInMonth = lastDay.getDate();
 
-  const firstWeekDay =
-    (firstDay.getDay() + 6) % 7;
-
-  const daysInMonth =
-    lastDay.getDate();
-
-  const headers = [
-    "Lun",
-    "Mar",
-    "Mer",
-    "Jeu",
-    "Ven",
-    "Sam",
-    "Dim"
-  ];
+  const headers = ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"];
 
   headers.forEach(day => {
-
     const header = document.createElement("div");
-
     header.className = "day-header";
     header.textContent = day;
-
     container.appendChild(header);
   });
 
   for (let i = 0; i < firstWeekDay; i++) {
-
     const empty = document.createElement("div");
-
     container.appendChild(empty);
   }
 
-  const sessionFilter =
-    document.getElementById("sessionFilter").value;
+  const sessionFilter = document.getElementById("sessionFilter").value;
 
   for (let day = 1; day <= daysInMonth; day++) {
-
-    const date = new Date(
-      year,
-      month - 1,
-      day
-    );
 
     const dateString =
       year +
@@ -975,88 +879,61 @@ function renderCalendar() {
       "-" +
       String(day).padStart(2, "0");
 
-    const dayElement =
-      document.createElement("div");
-
+    const dayElement = document.createElement("div");
     dayElement.className = "day";
-
-    dayElement.innerHTML =
-      `<div class="day-number">${day}</div>`;
+    dayElement.innerHTML = `<div class="day-number">${day}</div>`;
 
     let daySlots = data.slots.filter(slot =>
-      String(slot.slot_date).slice(0, 10) === dateString
+      String(slot.date).slice(0, 10) === dateString
     );
 
     if (sessionFilter) {
-
       daySlots = daySlots.filter(slot =>
         String(slot.session_id) === String(sessionFilter)
       );
     }
 
     daySlots.sort((a, b) =>
-      String(a.start_time).localeCompare(
-        String(b.start_time)
-      )
+      String(a.time).localeCompare(String(b.time))
     );
 
     daySlots.forEach(slot => {
 
-      const session =
-        data.sessions.find(
-          s => String(s.id) === String(slot.session_id)
-        );
+      const session = data.sessions.find(
+        s => String(s.id) === String(slot.session_id)
+      );
 
-      const isAvailable =
-        slot.status === "available";
+      const isAvailable = slot.status === "available";
 
-      const slotElement =
-        document.createElement("div");
+      const slotElement = document.createElement("div");
+      slotElement.className = "slot " + (isAvailable ? "" : "unavailable");
 
-      slotElement.className =
-        "slot " +
-        (isAvailable ? "" : "unavailable");
+      const booking = data.bookings.find(
+        b => String(b.slot_id) === String(slot.id)
+      );
 
-      const booking =
-        data.bookings.find(
-          b => String(b.slot_id) === String(slot.id)
-        );
-
-      const partnerText =
-        booking && booking.partner_name
-          ? `<div>Partenaire : ${escapeHtml(booking.partner_name)}</div>`
-          : "";
+      const partnerText = booking && booking.partner_name
+        ? `<div>Partenaire : ${escapeHtml(booking.partner_name)}</div>`
+        : "";
 
       slotElement.innerHTML = `
-
         <strong>
-          ${escapeHtml(
-            String(slot.start_time).slice(0,5)
-          )}
+          ${escapeHtml(String(slot.time).slice(0, 5))}
           —
-          ${escapeHtml(
-            session ? session.name : "Pack"
-          )}
+          ${escapeHtml(session ? session.name : "Pack")}
         </strong>
 
         <div>
-          ${escapeHtml(
-            session
-              ? session.duration_minutes + " min"
-              : ""
-          )}
+          ${escapeHtml(session ? session.duration + " min" : "")}
         </div>
 
         <div>
-          ${isAvailable
-            ? "Disponible"
-            : "Indisponible"}
+          ${isAvailable ? "Disponible" : "Indisponible"}
         </div>
 
         ${partnerText}
 
         <div class="slot-buttons">
-
           ${
             isAvailable
               ? `
@@ -1083,7 +960,6 @@ function renderCalendar() {
           >
             Supprimer
           </button>
-
         </div>
       `;
 
@@ -1101,82 +977,69 @@ function renderCalendar() {
 
 function renderOpeningHours(items = []) {
 
-  const container =
-    document.getElementById("openingHoursContainer");
-
+  const container = document.getElementById("openingHoursContainer");
   container.innerHTML = "";
 
   const days = [
-    "Lundi",
-    "Mardi",
-    "Mercredi",
-    "Jeudi",
-    "Vendredi",
-    "Samedi",
-    "Dimanche"
+    { label: "Lundi", dayOfWeek: 1 },
+    { label: "Mardi", dayOfWeek: 2 },
+    { label: "Mercredi", dayOfWeek: 3 },
+    { label: "Jeudi", dayOfWeek: 4 },
+    { label: "Vendredi", dayOfWeek: 5 },
+    { label: "Samedi", dayOfWeek: 6 },
+    { label: "Dimanche", dayOfWeek: 0 }
   ];
 
-  days.forEach((name, index) => {
+  days.forEach(day => {
 
-    const item =
-      items.find(
-        h => Number(h.day_of_week) === index
-      ) || {
-        day_of_week: index,
-        is_open: false,
-        start_time: "09:00",
-        end_time: "19:00"
-      };
+    const item = items.find(
+      h => Number(h.day_of_week) === day.dayOfWeek
+    ) || {
+      day_of_week: day.dayOfWeek,
+      is_open: false,
+      start_time: "09:00",
+      end_time: "19:00"
+    };
 
-    const row =
-      document.createElement("div");
-
+    const row = document.createElement("div");
     row.className = "grid";
-
     row.style.marginBottom = "12px";
 
     row.innerHTML = `
-
       <div>
-        <strong>${name}</strong>
+        <strong>${day.label}</strong>
 
         <div class="checkbox-row">
-
           <input
             type="checkbox"
-            id="open-${index}"
+            id="open-${day.dayOfWeek}"
             ${item.is_open ? "checked" : ""}
           >
 
-          <label for="open-${index}">
+          <label for="open-${day.dayOfWeek}">
             Ouvert
           </label>
-
         </div>
       </div>
 
       <div class="grid">
-
         <div>
           <label>Début</label>
-
           <input
             type="time"
-            id="start-${index}"
-            value="${String(item.start_time || "09:00").slice(0,5)}"
+            id="start-${day.dayOfWeek}"
+            value="${String(item.start_time || "09:00").slice(0, 5)}"
           >
         </div>
 
         <div>
           <label>Fin</label>
-
           <input
             type="time"
-            id="end-${index}"
-            value="${String(item.end_time || "19:00").slice(0,5)}"
+            id="end-${day.dayOfWeek}"
+            value="${String(item.end_time || "19:00").slice(0, 5)}"
           >
         </div>
-
       </div>
     `;
 
@@ -1189,67 +1052,42 @@ async function saveOpeningHours() {
 
   const hours = [];
 
-  for (let i = 0; i < 7; i++) {
-
+  for (let dayOfWeek = 0; dayOfWeek < 7; dayOfWeek++) {
     hours.push({
-
-      day_of_week: i,
-
-      is_open:
-        document.getElementById("open-" + i).checked,
-
-      start_time:
-        document.getElementById("start-" + i).value,
-
-      end_time:
-        document.getElementById("end-" + i).value
+      day_of_week: dayOfWeek,
+      is_open: document.getElementById("open-" + dayOfWeek).checked,
+      start_time: document.getElementById("start-" + dayOfWeek).value,
+      end_time: document.getElementById("end-" + dayOfWeek).value
     });
   }
 
   try {
 
     const response = await fetch("/api/admin", {
-
       method: "POST",
-
       headers: {
         "Content-Type": "application/json"
       },
-
       body: JSON.stringify({
         action: "updateOpeningHours",
         password: adminPassword,
         hours
       })
-
     });
 
     const result = await response.json();
 
     if (!response.ok || !result.success) {
-
-      showMessage(
-        result.error || "Erreur.",
-        "error"
-      );
-
+      showMessage(result.error || "Erreur.", "error");
       return;
     }
 
-    showMessage(
-      "Horaires enregistrés."
-    );
-
+    showMessage("Horaires enregistrés.");
     await loadData();
 
   } catch (error) {
-
     console.error(error);
-
-    showMessage(
-      "Erreur serveur.",
-      "error"
-    );
+    showMessage("Erreur serveur.", "error");
   }
 }
 
@@ -1260,28 +1098,19 @@ async function saveOpeningHours() {
 
 function renderBookings(items = []) {
 
-  const container =
-    document.getElementById("bookingsContainer");
-
+  const container = document.getElementById("bookingsContainer");
   container.innerHTML = "";
 
   if (items.length === 0) {
-
-    container.innerHTML =
-      '<div class="small">Aucune réservation.</div>';
-
+    container.innerHTML = '<div class="small">Aucune réservation.</div>';
     return;
   }
 
-  const table =
-    document.createElement("table");
+  const table = document.createElement("table");
 
   table.innerHTML = `
-
     <thead>
-
       <tr>
-
         <th>Date</th>
         <th>Heure</th>
         <th>Client</th>
@@ -1289,101 +1118,62 @@ function renderBookings(items = []) {
         <th>Partenaire</th>
         <th>Participants</th>
         <th>Action</th>
-
       </tr>
-
     </thead>
-
     <tbody></tbody>
   `;
 
-  const tbody =
-    table.querySelector("tbody");
+  const tbody = table.querySelector("tbody");
 
   items
     .slice()
     .sort((a, b) => {
-
-      const ad =
-        String(a.created_at || "");
-
-      const bd =
-        String(b.created_at || "");
-
+      const ad = String(a.created_at || "");
+      const bd = String(b.created_at || "");
       return bd.localeCompare(ad);
     })
     .forEach(booking => {
 
-      const slot =
-        data.slots.find(
-          s => String(s.id) === String(booking.slot_id)
-        );
+      const slot = data.slots.find(
+        s => String(s.id) === String(booking.slot_id)
+      );
 
-      const session =
-        slot
-          ? data.sessions.find(
-              s => String(s.id) === String(slot.session_id)
-            )
-          : null;
+      const session = slot
+        ? data.sessions.find(
+            s => String(s.id) === String(slot.session_id)
+          )
+        : null;
 
-      const tr =
-        document.createElement("tr");
+      const tr = document.createElement("tr");
 
       tr.innerHTML = `
-
         <td>
-          ${
-            slot
-              ? escapeHtml(
-                  String(slot.slot_date).slice(0,10)
-                )
-              : "-"
-          }
+          ${slot ? escapeHtml(String(slot.date).slice(0, 10)) : "-"}
         </td>
 
         <td>
-          ${
-            slot
-              ? escapeHtml(
-                  String(slot.start_time).slice(0,5)
-                )
-              : "-"
-          }
+          ${slot ? escapeHtml(String(slot.time).slice(0, 5)) : "-"}
         </td>
 
         <td>
-          ${escapeHtml(
-            booking.first_name || ""
-          )}
-          ${escapeHtml(
-            booking.last_name || ""
-          )}
+          ${escapeHtml(booking.first_name || "")}
+          ${escapeHtml(booking.last_name || "")}
           <br>
           <span class="small">
-            ${escapeHtml(
-              booking.email || ""
-            )}
+            ${escapeHtml(booking.email || "")}
           </span>
         </td>
 
         <td>
-          ${escapeHtml(
-            session
-              ? session.name
-              : "-"
-          )}
+          ${escapeHtml(session ? session.name : "-")}
         </td>
 
         <td>
-          ${escapeHtml(
-            booking.partner_name || "-"
-          )}
+          ${escapeHtml(booking.partner_name || "-")}
         </td>
 
         <td>
-          ${escapeHtml(
-            String(booking.participants || 1)
-          )}
+          ${escapeHtml(String(booking.participants || 1))}
         </td>
 
         <td>
@@ -1403,67 +1193,40 @@ function renderBookings(items = []) {
 }
 
 
-async function releaseBooking(
-  bookingId,
-  slotId
-) {
+async function releaseBooking(bookingId, slotId) {
 
-  if (!confirm(
-    "Libérer cette réservation ?"
-  )) {
+  if (!confirm("Libérer cette réservation ?")) {
     return;
   }
 
   try {
 
     const response = await fetch("/api/admin", {
-
       method: "POST",
-
       headers: {
         "Content-Type": "application/json"
       },
-
       body: JSON.stringify({
-
         action: "releaseSlot",
-
         password: adminPassword,
-
         bookingId,
         slotId
-
       })
-
     });
 
-    const result =
-      await response.json();
+    const result = await response.json();
 
     if (!response.ok || !result.success) {
-
-      showMessage(
-        result.error || "Erreur.",
-        "error"
-      );
-
+      showMessage(result.error || "Erreur.", "error");
       return;
     }
 
-    showMessage(
-      "Réservation libérée."
-    );
-
+    showMessage("Réservation libérée.");
     await loadData();
 
   } catch (error) {
-
     console.error(error);
-
-    showMessage(
-      "Erreur serveur.",
-      "error"
-    );
+    showMessage("Erreur serveur.", "error");
   }
 }
 
@@ -1474,101 +1237,70 @@ async function releaseBooking(
 
 function renderSpecialHours(items = []) {
 
-  const container =
-    document.getElementById("specialHoursContainer");
-
+  const container = document.getElementById("specialHoursContainer");
   container.innerHTML = "";
 
   if (items.length === 0) {
-
-    container.innerHTML =
-      '<div class="small">Aucune ouverture exceptionnelle.</div>';
-
+    container.innerHTML = '<div class="small">Aucune ouverture exceptionnelle.</div>';
     return;
   }
 
-  const table =
-    document.createElement("table");
+  const table = document.createElement("table");
 
   table.innerHTML = `
-
     <thead>
-
       <tr>
-
         <th>Date</th>
         <th>Statut</th>
         <th>Horaires</th>
         <th>Note</th>
         <th>Action</th>
-
       </tr>
-
     </thead>
-
     <tbody></tbody>
   `;
 
-  const tbody =
-    table.querySelector("tbody");
+  const tbody = table.querySelector("tbody");
 
   items
     .slice()
     .sort((a, b) =>
-      String(a.date).localeCompare(
-        String(b.date)
-      )
+      String(a.date).localeCompare(String(b.date))
     )
     .forEach(item => {
 
-      const tr =
-        document.createElement("tr");
+      const tr = document.createElement("tr");
 
       tr.innerHTML = `
-
         <td>
           ${escapeHtml(item.date)}
         </td>
 
         <td>
-          ${
-            item.is_open
-              ? "Ouvert"
-              : "Fermé"
-          }
+          ${item.is_open ? "Ouvert" : "Fermé"}
         </td>
 
         <td>
           ${
             item.is_open
-              ? escapeHtml(
-                  String(item.start_time || "").slice(0,5)
-                )
-                +
-                " — "
-                +
-                escapeHtml(
-                  String(item.end_time || "").slice(0,5)
-                )
+              ? escapeHtml(String(item.start_time || "").slice(0, 5))
+                + " — "
+                + escapeHtml(String(item.end_time || "").slice(0, 5))
               : "-"
           }
         </td>
 
         <td>
-          ${escapeHtml(
-            item.note || ""
-          )}
+          ${escapeHtml(item.note || "")}
         </td>
 
         <td>
-
           <button
             class="danger"
             onclick="deleteSpecialHours('${item.id}')"
           >
             Supprimer
           </button>
-
         </td>
       `;
 
@@ -1580,163 +1312,92 @@ function renderSpecialHours(items = []) {
 
 
 function openSpecialModal() {
-
-  document.getElementById(
-    "specialModal"
-  ).classList.add("active");
-
+  document.getElementById("specialModal").classList.add("active");
 }
 
 
 async function createSpecialHours() {
 
-  const date =
-    document.getElementById("specialDate").value;
-
-  const isOpen =
-    document.getElementById("specialIsOpen").value === "true";
-
-  const startTime =
-    document.getElementById("specialStart").value;
-
-  const endTime =
-    document.getElementById("specialEnd").value;
-
-  const note =
-    document.getElementById("specialNote").value;
+  const date = document.getElementById("specialDate").value;
+  const isOpen = document.getElementById("specialIsOpen").value === "true";
+  const startTime = document.getElementById("specialStart").value;
+  const endTime = document.getElementById("specialEnd").value;
+  const note = document.getElementById("specialNote").value;
 
   if (!date) {
-
-    showMessage(
-      "Choisis une date.",
-      "error"
-    );
-
+    showMessage("Choisis une date.", "error");
     return;
   }
 
   try {
 
-    const response =
-      await fetch("/api/admin", {
+    const response = await fetch("/api/admin", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        action: "createSpecialHours",
+        password: adminPassword,
+        date,
+        is_open: isOpen,
+        start_time: startTime,
+        end_time: endTime,
+        note
+      })
+    });
 
-        method: "POST",
-
-        headers: {
-          "Content-Type": "application/json"
-        },
-
-        body: JSON.stringify({
-
-          action: "createSpecialHours",
-
-          password: adminPassword,
-
-          date,
-
-          is_open: isOpen,
-
-          start_time: startTime,
-
-          end_time: endTime,
-
-          note
-
-        })
-
-      });
-
-    const result =
-      await response.json();
+    const result = await response.json();
 
     if (!response.ok || !result.success) {
-
-      showMessage(
-        result.error || "Erreur.",
-        "error"
-      );
-
+      showMessage(result.error || "Erreur.", "error");
       return;
     }
 
     closeModal("specialModal");
-
-    showMessage(
-      "Ouverture enregistrée."
-    );
-
+    showMessage("Ouverture enregistrée.");
     await loadData();
 
   } catch (error) {
-
     console.error(error);
-
-    showMessage(
-      "Erreur serveur.",
-      "error"
-    );
+    showMessage("Erreur serveur.", "error");
   }
 }
 
 
 async function deleteSpecialHours(id) {
 
-  if (!confirm(
-    "Supprimer cette ouverture ?"
-  )) {
+  if (!confirm("Supprimer cette ouverture ?")) {
     return;
   }
 
   try {
 
-    const response =
-      await fetch("/api/admin", {
+    const response = await fetch("/api/admin", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        action: "deleteSpecialHours",
+        password: adminPassword,
+        id
+      })
+    });
 
-        method: "POST",
-
-        headers: {
-          "Content-Type": "application/json"
-        },
-
-        body: JSON.stringify({
-
-          action: "deleteSpecialHours",
-
-          password: adminPassword,
-
-          id
-
-        })
-
-      });
-
-    const result =
-      await response.json();
+    const result = await response.json();
 
     if (!response.ok || !result.success) {
-
-      showMessage(
-        result.error || "Erreur.",
-        "error"
-      );
-
+      showMessage(result.error || "Erreur.", "error");
       return;
     }
 
-    showMessage(
-      "Ouverture supprimée."
-    );
-
+    showMessage("Ouverture supprimée.");
     await loadData();
 
   } catch (error) {
-
     console.error(error);
-
-    showMessage(
-      "Erreur serveur.",
-      "error"
-    );
+    showMessage("Erreur serveur.", "error");
   }
 }
 
@@ -1747,86 +1408,61 @@ async function deleteSpecialHours(id) {
 
 function renderBlocked(items = []) {
 
-  const container =
-    document.getElementById("blockedContainer");
-
+  const container = document.getElementById("blockedContainer");
   container.innerHTML = "";
 
   if (items.length === 0) {
-
-    container.innerHTML =
-      '<div class="small">Aucun blocage.</div>';
-
+    container.innerHTML = '<div class="small">Aucun blocage.</div>';
     return;
   }
 
-  const table =
-    document.createElement("table");
+  const table = document.createElement("table");
 
   table.innerHTML = `
-
     <thead>
-
       <tr>
-
         <th>Date</th>
         <th>Horaires</th>
         <th>Motif</th>
         <th>Action</th>
-
       </tr>
-
     </thead>
-
     <tbody></tbody>
   `;
 
-  const tbody =
-    table.querySelector("tbody");
+  const tbody = table.querySelector("tbody");
 
   items
     .slice()
     .sort((a, b) =>
-      String(a.date).localeCompare(
-        String(b.date)
-      )
+      String(a.date).localeCompare(String(b.date))
     )
     .forEach(item => {
 
-      const tr =
-        document.createElement("tr");
+      const tr = document.createElement("tr");
 
       tr.innerHTML = `
-
         <td>
           ${escapeHtml(item.date)}
         </td>
 
         <td>
-          ${escapeHtml(
-            String(item.start_time || "").slice(0,5)
-          )}
+          ${escapeHtml(String(item.start_time || "").slice(0, 5))}
           —
-          ${escapeHtml(
-            String(item.end_time || "").slice(0,5)
-          )}
+          ${escapeHtml(String(item.end_time || "").slice(0, 5))}
         </td>
 
         <td>
-          ${escapeHtml(
-            item.reason || ""
-          )}
+          ${escapeHtml(item.reason || "")}
         </td>
 
         <td>
-
           <button
             class="danger"
             onclick="deleteBlockedPeriod('${item.id}')"
           >
             Supprimer
           </button>
-
         </td>
       `;
 
@@ -1838,158 +1474,90 @@ function renderBlocked(items = []) {
 
 
 function openBlockedModal() {
-
-  document.getElementById(
-    "blockedModal"
-  ).classList.add("active");
-
+  document.getElementById("blockedModal").classList.add("active");
 }
 
 
 async function createBlockedPeriod() {
 
-  const date =
-    document.getElementById("blockedDate").value;
-
-  const startTime =
-    document.getElementById("blockedStart").value;
-
-  const endTime =
-    document.getElementById("blockedEnd").value;
-
-  const reason =
-    document.getElementById("blockedReason").value;
+  const date = document.getElementById("blockedDate").value;
+  const startTime = document.getElementById("blockedStart").value;
+  const endTime = document.getElementById("blockedEnd").value;
+  const reason = document.getElementById("blockedReason").value;
 
   if (!date || !startTime || !endTime) {
-
-    showMessage(
-      "Remplis la date et les horaires.",
-      "error"
-    );
-
+    showMessage("Remplis la date et les horaires.", "error");
     return;
   }
 
   try {
 
-    const response =
-      await fetch("/api/admin", {
+    const response = await fetch("/api/admin", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        action: "createBlockedPeriod",
+        password: adminPassword,
+        date,
+        start_time: startTime,
+        end_time: endTime,
+        reason
+      })
+    });
 
-        method: "POST",
-
-        headers: {
-          "Content-Type": "application/json"
-        },
-
-        body: JSON.stringify({
-
-          action: "createBlockedPeriod",
-
-          password: adminPassword,
-
-          date,
-
-          start_time: startTime,
-
-          end_time: endTime,
-
-          reason
-
-        })
-
-      });
-
-    const result =
-      await response.json();
+    const result = await response.json();
 
     if (!response.ok || !result.success) {
-
-      showMessage(
-        result.error || "Erreur.",
-        "error"
-      );
-
+      showMessage(result.error || "Erreur.", "error");
       return;
     }
 
     closeModal("blockedModal");
-
-    showMessage(
-      "Blocage enregistré."
-    );
-
+    showMessage("Blocage enregistré.");
     await loadData();
 
   } catch (error) {
-
     console.error(error);
-
-    showMessage(
-      "Erreur serveur.",
-      "error"
-    );
+    showMessage("Erreur serveur.", "error");
   }
 }
 
 
 async function deleteBlockedPeriod(id) {
 
-  if (!confirm(
-    "Supprimer ce blocage ?"
-  )) {
+  if (!confirm("Supprimer ce blocage ?")) {
     return;
   }
 
   try {
 
-    const response =
-      await fetch("/api/admin", {
+    const response = await fetch("/api/admin", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        action: "deleteBlockedPeriod",
+        password: adminPassword,
+        id
+      })
+    });
 
-        method: "POST",
-
-        headers: {
-          "Content-Type": "application/json"
-        },
-
-        body: JSON.stringify({
-
-          action: "deleteBlockedPeriod",
-
-          password: adminPassword,
-
-          id
-
-        })
-
-      });
-
-    const result =
-      await response.json();
+    const result = await response.json();
 
     if (!response.ok || !result.success) {
-
-      showMessage(
-        result.error || "Erreur.",
-        "error"
-      );
-
+      showMessage(result.error || "Erreur.", "error");
       return;
     }
 
-    showMessage(
-      "Blocage supprimé."
-    );
-
+    showMessage("Blocage supprimé.");
     await loadData();
 
   } catch (error) {
-
     console.error(error);
-
-    showMessage(
-      "Erreur serveur.",
-      "error"
-    );
+    showMessage("Erreur serveur.", "error");
   }
 }
 
@@ -1999,96 +1567,53 @@ async function deleteBlockedPeriod(id) {
 ========================= */
 
 function openSlotModal() {
-
-  document.getElementById(
-    "slotModal"
-  ).classList.add("active");
-
+  document.getElementById("slotModal").classList.add("active");
 }
 
 
 async function createSlot() {
 
-  const slotDate =
-    document.getElementById("slotDate").value;
-
-  const startTime =
-    document.getElementById("slotTime").value;
-
-  const sessionId =
-    document.getElementById("slotSession").value;
-
-  const status =
-    document.getElementById("slotStatus").value;
+  const slotDate = document.getElementById("slotDate").value;
+  const startTime = document.getElementById("slotTime").value;
+  const sessionId = document.getElementById("slotSession").value;
+  const status = document.getElementById("slotStatus").value;
 
   if (!slotDate || !startTime || !sessionId) {
-
-    showMessage(
-      "Remplis tous les champs.",
-      "error"
-    );
-
+    showMessage("Remplis tous les champs.", "error");
     return;
   }
 
   try {
 
-    const response =
-      await fetch("/api/admin", {
+    const response = await fetch("/api/admin", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        action: "createSlot",
+        password: adminPassword,
+        date: slotDate,
+        time: startTime,
+        session_id: sessionId,
+        status
+      })
+    });
 
-        method: "POST",
-
-        headers: {
-          "Content-Type": "application/json"
-        },
-
-        body: JSON.stringify({
-
-          action: "createSlot",
-
-          password: adminPassword,
-
-          slot_date: slotDate,
-
-          start_time: startTime,
-
-          session_id: sessionId,
-
-          status
-
-        })
-
-      });
-
-    const result =
-      await response.json();
+    const result = await response.json();
 
     if (!response.ok || !result.success) {
-
-      showMessage(
-        result.error || "Erreur.",
-        "error"
-      );
-
+      showMessage(result.error || "Erreur.", "error");
       return;
     }
 
     closeModal("slotModal");
-
-    showMessage(
-      "Créneau créé."
-    );
-
+    showMessage("Créneau créé.");
     await loadData();
 
   } catch (error) {
-
     console.error(error);
-
-    showMessage(
-      "Erreur serveur.",
-      "error"
-    );
+    showMessage("Erreur serveur.", "error");
   }
 }
 
@@ -2099,10 +1624,9 @@ async function createSlot() {
 
 async function changeSlotStatus(slotId) {
 
-  const slot =
-    data.slots.find(
-      s => String(s.id) === String(slotId)
-    );
+  const slot = data.slots.find(
+    s => String(s.id) === String(slotId)
+  );
 
   if (!slot) {
     return;
@@ -2115,114 +1639,68 @@ async function changeSlotStatus(slotId) {
 
   try {
 
-    const response =
-      await fetch("/api/admin", {
+    const response = await fetch("/api/admin", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        action: "changeSlot",
+        password: adminPassword,
+        slotId,
+        status: newStatus
+      })
+    });
 
-        method: "POST",
-
-        headers: {
-          "Content-Type": "application/json"
-        },
-
-        body: JSON.stringify({
-
-          action: "changeSlot",
-
-          password: adminPassword,
-
-          slotId,
-
-          status: newStatus
-
-        })
-
-      });
-
-    const result =
-      await response.json();
+    const result = await response.json();
 
     if (!response.ok || !result.success) {
-
-      showMessage(
-        result.error || "Erreur.",
-        "error"
-      );
-
+      showMessage(result.error || "Erreur.", "error");
       return;
     }
 
     await loadData();
 
   } catch (error) {
-
     console.error(error);
-
-    showMessage(
-      "Erreur serveur.",
-      "error"
-    );
+    showMessage("Erreur serveur.", "error");
   }
 }
 
 
 async function deleteSlot(slotId) {
 
-  if (!confirm(
-    "Supprimer ce créneau ?"
-  )) {
+  if (!confirm("Supprimer ce créneau ?")) {
     return;
   }
 
   try {
 
-    const response =
-      await fetch("/api/admin", {
+    const response = await fetch("/api/admin", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        action: "deleteSlot",
+        password: adminPassword,
+        slotId
+      })
+    });
 
-        method: "POST",
-
-        headers: {
-          "Content-Type": "application/json"
-        },
-
-        body: JSON.stringify({
-
-          action: "deleteSlot",
-
-          password: adminPassword,
-
-          slotId
-
-        })
-
-      });
-
-    const result =
-      await response.json();
+    const result = await response.json();
 
     if (!response.ok || !result.success) {
-
-      showMessage(
-        result.error || "Erreur.",
-        "error"
-      );
-
+      showMessage(result.error || "Erreur.", "error");
       return;
     }
 
-    showMessage(
-      "Créneau supprimé."
-    );
-
+    showMessage("Créneau supprimé.");
     await loadData();
 
   } catch (error) {
-
     console.error(error);
-
-    showMessage(
-      "Erreur serveur.",
-      "error"
-    );
+    showMessage("Erreur serveur.", "error");
   }
 }
 
@@ -2233,184 +1711,80 @@ async function deleteSlot(slotId) {
 
 function openPartnerModal(slotId) {
 
-  const slot =
-    data.slots.find(
-      s => String(s.id) === String(slotId)
-    );
+  const slot = data.slots.find(
+    s => String(s.id) === String(slotId)
+  );
 
   if (!slot) {
     return;
   }
 
-  document.getElementById(
-    "partnerSlotId"
-  ).value = slotId;
-
-  document.getElementById(
-    "partnerName"
-  ).value = "";
-
-  document.getElementById(
-    "partnerTicket"
-  ).value = "";
-
-  document.getElementById(
-    "partnerParticipants"
-  ).value = "1";
-
-  document.getElementById(
-    "partnerFirstName"
-  ).value = "";
-
-  document.getElementById(
-    "partnerLastName"
-  ).value = "";
-
-  document.getElementById(
-    "partnerEmail"
-  ).value = "";
-
-  document.getElementById(
-    "partnerPhone"
-  ).value = "";
-
-  document.getElementById(
-    "partnerComment"
-  ).value = "";
-
-  document.getElementById(
-    "partnerModal"
-  ).classList.add("active");
+  document.getElementById("partnerSlotId").value = slotId;
+  document.getElementById("partnerName").value = "";
+  document.getElementById("partnerTicket").value = "";
+  document.getElementById("partnerParticipants").value = "1";
+  document.getElementById("partnerFirstName").value = "";
+  document.getElementById("partnerLastName").value = "";
+  document.getElementById("partnerEmail").value = "";
+  document.getElementById("partnerPhone").value = "";
+  document.getElementById("partnerComment").value = "";
+  document.getElementById("partnerModal").classList.add("active");
 }
 
 
 async function createPartnerBooking() {
 
-  const slotId =
-    document.getElementById(
-      "partnerSlotId"
-    ).value;
-
-  const partnerName =
-    document.getElementById(
-      "partnerName"
-    ).value.trim();
-
-  const ticket =
-    document.getElementById(
-      "partnerTicket"
-    ).value.trim();
-
-  const participants =
-    Number(
-      document.getElementById(
-        "partnerParticipants"
-      ).value
-    );
-
-  const firstName =
-    document.getElementById(
-      "partnerFirstName"
-    ).value.trim();
-
-  const lastName =
-    document.getElementById(
-      "partnerLastName"
-    ).value.trim();
-
-  const email =
-    document.getElementById(
-      "partnerEmail"
-    ).value.trim();
-
-  const phone =
-    document.getElementById(
-      "partnerPhone"
-    ).value.trim();
-
-  const comment =
-    document.getElementById(
-      "partnerComment"
-    ).value.trim();
+  const slotId = document.getElementById("partnerSlotId").value;
+  const partnerName = document.getElementById("partnerName").value.trim();
+  const ticket = document.getElementById("partnerTicket").value.trim();
+  const participants = Number(document.getElementById("partnerParticipants").value);
+  const firstName = document.getElementById("partnerFirstName").value.trim();
+  const lastName = document.getElementById("partnerLastName").value.trim();
+  const email = document.getElementById("partnerEmail").value.trim();
+  const phone = document.getElementById("partnerPhone").value.trim();
+  const comment = document.getElementById("partnerComment").value.trim();
 
   if (!slotId || !firstName || !lastName) {
-
-    showMessage(
-      "Le prénom et le nom sont obligatoires.",
-      "error"
-    );
-
+    showMessage("Le prénom et le nom sont obligatoires.", "error");
     return;
   }
 
   try {
 
-    const response =
-      await fetch("/api/admin", {
+    const response = await fetch("/api/admin", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        action: "partnerBooking",
+        password: adminPassword,
+        slotId,
+        partner_name: partnerName,
+        ticket,
+        participants,
+        first_name: firstName,
+        last_name: lastName,
+        email,
+        phone,
+        comment
+      })
+    });
 
-        method: "POST",
-
-        headers: {
-          "Content-Type": "application/json"
-        },
-
-        body: JSON.stringify({
-
-          action: "partnerBooking",
-
-          password: adminPassword,
-
-          slotId,
-
-          partner_name: partnerName,
-
-          ticket,
-
-          participants,
-
-          first_name: firstName,
-
-          last_name: lastName,
-
-          email,
-
-          phone,
-
-          comment
-
-        })
-
-      });
-
-    const result =
-      await response.json();
+    const result = await response.json();
 
     if (!response.ok || !result.success) {
-
-      showMessage(
-        result.error || "Erreur.",
-        "error"
-      );
-
+      showMessage(result.error || "Erreur.", "error");
       return;
     }
 
     closeModal("partnerModal");
-
-    showMessage(
-      "Réservation partenaire enregistrée."
-    );
-
+    showMessage("Réservation partenaire enregistrée.");
     await loadData();
 
   } catch (error) {
-
     console.error(error);
-
-    showMessage(
-      "Erreur serveur.",
-      "error"
-    );
+    showMessage("Erreur serveur.", "error");
   }
 }
 
@@ -2419,15 +1793,11 @@ async function createPartnerBooking() {
    EVENEMENT ENTREE
 ========================= */
 
-document
-  .getElementById("passwordInput")
-  .addEventListener("keydown", event => {
-
-    if (event.key === "Enter") {
-      login();
-    }
-
-  });
+document.getElementById("passwordInput").addEventListener("keydown", event => {
+  if (event.key === "Enter") {
+    login();
+  }
+});
 
 </script>
 
