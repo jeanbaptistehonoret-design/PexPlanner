@@ -10,22 +10,28 @@
   box-sizing: border-box;
 }
 
+html,
 body {
   margin: 0;
+  padding: 0;
+}
+
+body {
   font-family: Arial, Helvetica, sans-serif;
-  background: #f5f7fa;
+  background: transparent;
   color: #17212b;
 }
 
 .container {
+  width: 100%;
   max-width: 1100px;
   margin: auto;
-  padding: 25px 15px 45px;
+  padding: 10px 10px 25px;
 }
 
 .card {
   background: white;
-  border: 1px solid #dfe5eb;
+  border: 1px solid transparent;
   border-radius: 18px;
   box-shadow: 0 10px 30px rgba(0,0,0,.07);
   overflow: hidden;
@@ -115,6 +121,10 @@ textarea {
   cursor: pointer;
 }
 
+.nav button:hover {
+  background: #f3f6f9;
+}
+
 .calendar {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
@@ -191,7 +201,7 @@ textarea {
 
 /* =========================
    POPUP
-   ========================= */
+========================= */
 
 .modal {
   position: fixed;
@@ -309,7 +319,7 @@ textarea {
 
 /* =========================
    CONFIRMATION
-   ========================= */
+========================= */
 
 .confirmation {
   text-align: center;
@@ -352,6 +362,14 @@ textarea {
 }
 
 @media(max-width: 700px) {
+
+  .container {
+    padding: 5px 5px 20px;
+  }
+
+  .content {
+    padding: 15px;
+  }
 
   .form-grid {
     grid-template-columns: 1fr;
@@ -425,7 +443,6 @@ textarea {
 
       </div>
 
-
       <div class="calendar-header">
 
         <h2 id="monthTitle"></h2>
@@ -435,6 +452,7 @@ textarea {
           <button
             type="button"
             onclick="changeMonth(-1)"
+            aria-label="Mois précédent"
           >
             ‹
           </button>
@@ -442,6 +460,7 @@ textarea {
           <button
             type="button"
             onclick="changeMonth(1)"
+            aria-label="Mois suivant"
           >
             ›
           </button>
@@ -450,9 +469,7 @@ textarea {
 
       </div>
 
-
       <div id="calendar" class="calendar"></div>
-
 
       <div id="status" class="status">
         Chargement du planning...
@@ -465,14 +482,11 @@ textarea {
 </div>
 
 
-<!-- =====================================================
+<!-- =========================
      POPUP RESERVATION
-     ===================================================== -->
+========================= -->
 
-<div
-  id="bookingModal"
-  class="modal"
->
+<div id="bookingModal" class="modal">
 
   <div class="modal-box">
 
@@ -494,7 +508,6 @@ textarea {
 
     </div>
 
-
     <div
       id="formContainer"
       class="modal-body"
@@ -505,13 +518,11 @@ textarea {
         class="message"
       ></div>
 
-
       <form id="bookingForm">
 
         <div class="form-grid">
 
           <div>
-
             <label for="firstName">
               Prénom *
             </label>
@@ -520,12 +531,9 @@ textarea {
               id="firstName"
               required
             >
-
           </div>
 
-
           <div>
-
             <label for="lastName">
               Nom *
             </label>
@@ -534,12 +542,9 @@ textarea {
               id="lastName"
               required
             >
-
           </div>
 
-
           <div>
-
             <label for="email">
               E-mail *
             </label>
@@ -549,12 +554,9 @@ textarea {
               type="email"
               required
             >
-
           </div>
 
-
           <div>
-
             <label for="phone">
               Téléphone *
             </label>
@@ -564,12 +566,9 @@ textarea {
               type="tel"
               required
             >
-
           </div>
 
-
           <div>
-
             <label for="ticket">
               Numéro de billet *
             </label>
@@ -579,38 +578,22 @@ textarea {
               required
               placeholder="Ex. PE-123456"
             >
-
           </div>
 
-
           <div>
-
             <label for="participants">
               Participants
             </label>
 
             <select id="participants">
 
-              <option value="1">
-                1
-              </option>
-
-              <option value="2">
-                2
-              </option>
-
-              <option value="3">
-                3
-              </option>
-
-              <option value="4">
-                4
-              </option>
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
 
             </select>
-
           </div>
-
 
           <div class="full">
 
@@ -627,7 +610,6 @@ textarea {
 
         </div>
 
-
         <div class="submit">
 
           <button
@@ -642,9 +624,6 @@ textarea {
       </form>
 
     </div>
-
-
-    <!-- CONFIRMATION -->
 
     <div
       id="confirmation"
@@ -694,7 +673,7 @@ let selectedSlot = null;
 
 /* =====================================================
    OUTILS
-   ===================================================== */
+===================================================== */
 
 function pad(number) {
 
@@ -741,15 +720,62 @@ function duration(minutes) {
 
 
 /* =====================================================
+   CHANGEMENT DE MOIS
+===================================================== */
+
+function changeMonth(direction) {
+
+  const monthInput =
+    document.getElementById("month");
+
+  if (!monthInput.value) {
+
+    const today = new Date();
+
+    monthInput.value =
+      today.getFullYear() +
+      "-" +
+      pad(today.getMonth() + 1);
+
+  }
+
+
+  const [
+    year,
+    month
+  ] =
+    monthInput.value
+      .split("-")
+      .map(Number);
+
+
+  const date =
+    new Date(
+      year,
+      month - 1 + direction,
+      1
+    );
+
+
+  monthInput.value =
+    date.getFullYear() +
+    "-" +
+    pad(date.getMonth() + 1);
+
+
+  renderCalendar();
+
+}
+
+
+/* =====================================================
    CHARGER LE PLANNING
-   ===================================================== */
+===================================================== */
 
 async function loadPlanning() {
 
   const status =
-    document.getElementById(
-      "status"
-    );
+    document.getElementById("status");
 
   status.textContent =
     "Chargement du planning...";
@@ -778,11 +804,6 @@ async function loadPlanning() {
     slots =
       await response.json();
 
-
-    /*
-     Les séances sont récupérées
-     depuis les créneaux retournés
-    */
 
     sessions = [];
 
@@ -821,7 +842,7 @@ async function loadPlanning() {
       select.innerHTML =
         `<option value="">
           Aucun pack disponible
-         </option>`;
+        </option>`;
 
       status.textContent =
         "Aucune disponibilité pour le moment.";
@@ -870,7 +891,7 @@ async function loadPlanning() {
 
 /* =====================================================
    CALENDRIER
-   ===================================================== */
+===================================================== */
 
 function renderCalendar() {
 
@@ -1129,7 +1150,7 @@ function renderCalendar() {
 
 /* =====================================================
    OUVRIR LE POPUP
-   ===================================================== */
+===================================================== */
 
 function openBookingModal(slot) {
 
@@ -1147,13 +1168,13 @@ function openBookingModal(slot) {
 
     `<strong>
       ${session.name}
-     </strong>
-     <br>
-     ${formatDate(slot.date)}
-     à ${slot.time.substring(0,5)}
-     <br>
-     Durée :
-     ${duration(session.duration)}`;
+    </strong>
+    <br>
+    ${formatDate(slot.date)}
+    à ${slot.time.substring(0,5)}
+    <br>
+    Durée :
+    ${duration(session.duration)}`;
 
 
   document.getElementById(
@@ -1202,7 +1223,7 @@ function closeBookingModal() {
 
 /* =====================================================
    MESSAGE
-   ===================================================== */
+===================================================== */
 
 function showMessage(
   text,
@@ -1245,7 +1266,7 @@ function hideMessage() {
 
 /* =====================================================
    RESERVATION
-   ===================================================== */
+===================================================== */
 
 document
   .getElementById(
@@ -1284,7 +1305,7 @@ document
         "Réservation en cours...";
 
 
-      const data = {
+      const bookingData = {
 
         slotId:
           selectedSlot.id,
@@ -1346,7 +1367,7 @@ document
 
               body:
                 JSON.stringify(
-                  data
+                  bookingData
                 )
 
             }
@@ -1404,19 +1425,13 @@ document
            <br><br>
            Billet :
            <strong>
-             ${data.ticket}
+             ${bookingData.ticket}
            </strong>`;
 
 
         selectedSlot =
           null;
 
-
-        /*
-         Recharge le planning :
-         le créneau réservé devient
-         immédiatement indisponible.
-        */
 
         await loadPlanning();
 
@@ -1444,7 +1459,7 @@ document
 
 /* =====================================================
    CONTROLES
-   ===================================================== */
+===================================================== */
 
 document
   .getElementById(
@@ -1466,9 +1481,9 @@ document
   );
 
 
-/*
- Fermer en cliquant à côté du popup
-*/
+/* =====================================================
+   FERMETURE POPUP
+===================================================== */
 
 document
   .getElementById(
@@ -1493,7 +1508,7 @@ document
 
 /* =====================================================
    DEMARRAGE
-   ===================================================== */
+===================================================== */
 
 const today =
   new Date();
